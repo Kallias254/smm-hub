@@ -38,7 +38,8 @@ export const generateBrandedImageTask: TaskConfig<{ input: GenerateBrandedImageI
       // 2. Prepare generation data
       const imagePath = path.resolve(process.cwd(), 'media', media.filename as string)
       const imageBuffer = fs.readFileSync(imagePath)
-      const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`
+      const mimeType = media.mimeType || 'image/png'
+      const base64Image = `data:${mimeType};base64,${imageBuffer.toString('base64')}`
 
       let logoUrl = ''
       if (tenant.branding?.logo) {

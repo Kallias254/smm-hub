@@ -25,7 +25,12 @@ export default buildConfig({
   collections: [Users, Media, Tenants, Campaigns, Posts],
   jobs: {
     tasks,
-    // autoRun: true,
+    autoRun: [
+      {
+        cron: '* * * * *', // Run every minute
+        queue: 'default',
+      },
+    ],
   },
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

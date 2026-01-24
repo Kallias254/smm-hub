@@ -14,9 +14,10 @@ export const Posts: CollectionConfig = {
       async ({ doc, operation, req, previousDoc }) => {
         // 1. Creative Engine Trigger (New Raw Media)
         if (doc.assets?.rawMedia && !doc.assets?.brandedMedia) {
+          const rawMediaId = typeof doc.assets.rawMedia === 'object' ? doc.assets.rawMedia.id : doc.assets.rawMedia
           const rawMedia = await req.payload.findByID({
             collection: 'media',
-            id: doc.assets.rawMedia,
+            id: rawMediaId,
           })
           const isVideo = rawMedia.mimeType?.startsWith('video/')
           const taskSlug = isVideo ? 'generateBrandedVideo' : 'generateBrandedImage'
@@ -39,7 +40,7 @@ export const Posts: CollectionConfig = {
         if (
           doc.distributionStatus === 'queued' && 
           previousDoc?.distributionStatus !== 'queued' &&
-          doc.assets?.brandedMedia
+          (doc.assets?.brandedMedia || (typeof doc.assets?.brandedMedia === 'object' && doc.assets.brandedMedia !== null))
         ) {
           await req.payload.jobs.queue({
             task: 'publishToPostiz',
