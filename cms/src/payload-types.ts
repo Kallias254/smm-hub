@@ -72,6 +72,7 @@ export interface Config {
     tenants: Tenant;
     campaigns: Campaign;
     posts: Post;
+    payments: Payment;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -85,6 +86,7 @@ export interface Config {
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     campaigns: CampaignsSelect<false> | CampaignsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
+    payments: PaymentsSelect<false> | PaymentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -276,6 +278,33 @@ export interface Post {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payments".
+ */
+export interface Payment {
+  id: number;
+  tenant: number | Tenant;
+  amount: number;
+  /**
+   * Format: 2547XXXXXXXX
+   */
+  phoneNumber: string;
+  transactionId?: string | null;
+  checkoutRequestId: string;
+  status?: ('pending' | 'completed' | 'failed') | null;
+  rawCallback?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -411,6 +440,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'posts';
         value: number | Post;
+      } | null)
+    | ({
+        relationTo: 'payments';
+        value: number | Payment;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -554,6 +587,21 @@ export interface PostsSelect<T extends boolean = true> {
         rawMedia?: T;
         brandedMedia?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payments_select".
+ */
+export interface PaymentsSelect<T extends boolean = true> {
+  tenant?: T;
+  amount?: T;
+  phoneNumber?: T;
+  transactionId?: T;
+  checkoutRequestId?: T;
+  status?: T;
+  rawCallback?: T;
   updatedAt?: T;
   createdAt?: T;
 }

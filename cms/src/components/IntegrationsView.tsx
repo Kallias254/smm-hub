@@ -31,7 +31,7 @@ const IntegrationsView: React.FC = async () => {
           <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', background: '#f7fafc', border: '2px dashed #e2e8f0', borderRadius: '12px' }}>
             <p>No channels connected yet.</p>
             <a 
-              href="http://localhost:4007/integrations" 
+              href="http://localhost:4007/launches" 
               target="_blank" 
               rel="noopener noreferrer"
               style={{ display: 'inline-block', marginTop: '10px', padding: '10px 20px', background: '#3182ce', color: 'white', borderRadius: '6px', textDecoration: 'none' }}
