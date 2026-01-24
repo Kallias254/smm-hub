@@ -19,11 +19,12 @@
 *   Implement `distribution` Job Queue (Stubbed in `publishToPostizTask`).
 *   Test automated posting to a dummy Facebook Page.
 
-**Phase 4: The Mobile Bridge (Days 11-14) - ⏳ PENDING**
-*   Scaffold Flutter App (Basic structure exists).
-*   Implement Firebase Cloud Messaging (FCM).
-*   Build the "Share Intent" logic.
-*   Connect "Confirm Post" button to Payload API.
+**Phase 4: The Mobile Bridge (Days 11-14) - ✅ IN PROGRESS**
+*   Scaffold Flutter App (Completed: `HomeScreen`, `TaskCards`).
+*   Implement "Share Intent" logic (Completed via `share_plus` + `path_provider`).
+*   Connect "Confirm Post" feedback loop (Completed: Status updates to `published` after share).
+*   **FCM Status:** Currently **Mocked**. CMS logs notification events; Mobile app requires manual refresh or FCM credentials (`google-services.json`) for real push.
+*   **Next:** Add Auth login screen to the mobile app.
 
 **Phase 5: Monetization & Polish (Days 15+) - ⏳ PENDING**
 *   Integrate Daraja API (STK Push).
