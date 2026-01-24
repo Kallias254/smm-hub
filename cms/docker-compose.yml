@@ -1,0 +1,48 @@
+version: '3'
+
+services:
+  payload:
+    image: node:22-alpine
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/home/node/app
+      - node_modules:/home/node/app/node_modules
+    working_dir: /home/node/app/
+    # Install ffmpeg before starting dev server
+    command: sh -c "apk add --no-cache ffmpeg && corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgres://payload:payload@postgres:5432/payload
+
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=payload
+      - POSTGRES_PASSWORD=payload
+      - POSTGRES_DB=payload
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Postiz (Phase 3 - Coming Soon)
+  # postiz:
+  #   image: ghcr.io/gitroomhq/postiz-app:latest
+  #   ports:
+  #     - "4200:4200"
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  
+  # redis:
+  #   image: redis:alpine
+  #   restart: always
+
+volumes:
+  pgdata:
+  node_modules:
