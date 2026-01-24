@@ -1,0 +1,9 @@
+limit.numSearchAttributes:
+  - value: 100
+    constraints: {}
+limit.numCustomSearchAttributes:
+  - value: 100
+    constraints: {}
+limit.maxSearchAttributeValueSize:
+  - value: 4096
+    constraints: {}

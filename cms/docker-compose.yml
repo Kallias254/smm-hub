@@ -1,6 +1,5 @@
-version: '3'
-
 services:
+  # --- REAL ESTATE CMS (PAYLOAD) ---
   payload:
     image: node:22-alpine
     ports:
@@ -9,7 +8,6 @@ services:
       - .:/home/node/app
       - node_modules:/home/node/app/node_modules
     working_dir: /home/node/app/
-    # Install ffmpeg before starting dev server
     command: sh -c "apk add --no-cache ffmpeg && corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
     depends_on:
       - postgres
@@ -17,32 +15,178 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgres://payload:payload@postgres:5432/payload
+    networks:
+      - postiz-network
 
   postgres:
     image: postgres:15-alpine
     restart: always
     ports:
-      - "5432:5432"
+      - "5439:5432"
     environment:
       - POSTGRES_USER=payload
       - POSTGRES_PASSWORD=payload
       - POSTGRES_DB=payload
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - postiz-network
 
-  # Postiz (Phase 3 - Coming Soon)
-  # postiz:
-  #   image: ghcr.io/gitroomhq/postiz-app:latest
-  #   ports:
-  #     - "4200:4200"
-  #   depends_on:
-  #     - postgres
-  #     - redis
-  
-  # redis:
-  #   image: redis:alpine
-  #   restart: always
+  # --- OFFICIAL POSTIZ STACK ---
+  postiz:
+    image: ghcr.io/gitroomhq/postiz-app:latest
+    container_name: postiz
+    restart: always
+    environment:
+      # === Required Settings
+      MAIN_URL: 'http://localhost:4007'
+      FRONTEND_URL: 'http://localhost:4007'
+      NEXT_PUBLIC_BACKEND_URL: 'http://localhost:4007/api'
+      JWT_SECRET: 'official-secret-key-gitroom-1234567890'
+      DATABASE_URL: 'postgresql://postiz-user:postiz-password@postiz-postgres:5432/postiz-db-local'
+      REDIS_URL: 'redis://postiz-redis:6379'
+      BACKEND_INTERNAL_URL: 'http://localhost:3000'
+      TEMPORAL_ADDRESS: "temporal:7233"
+      IS_GENERAL: 'true'
+      DISABLE_REGISTRATION: 'false'
+      RUN_CRON: 'true'
+      STORAGE_PROVIDER: 'local'
+      UPLOAD_DIRECTORY: '/uploads'
+      NEXT_PUBLIC_UPLOAD_DIRECTORY: '/uploads'
+    volumes:
+      - postiz-config:/config/
+      - postiz-uploads:/uploads/
+    ports:
+      - "4007:5000"
+    networks:
+      - postiz-network
+      - temporal-network
+    depends_on:
+      postiz-postgres:
+        condition: service_healthy
+      postiz-redis:
+        condition: service_healthy
+
+  postiz-postgres:
+    image: postgres:17-alpine
+    container_name: postiz-postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postiz-password
+      POSTGRES_USER: postiz-user
+      POSTGRES_DB: postiz-db-local
+    volumes:
+      - postiz-postgres-vol:/var/lib/postgresql/data
+    networks:
+      - postiz-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postiz-user -d postiz-db-local"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  postiz-redis:
+    image: redis:7.2
+    container_name: postiz-redis
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - postiz-redis-data:/data
+    networks:
+      - postiz-network
+
+  # --- OFFICIAL TEMPORAL STACK ---
+  temporal-elasticsearch:
+    container_name: temporal-elasticsearch
+    image: elasticsearch:7.17.27
+    environment:
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - xpack.security.enabled=false
+    networks:
+      - temporal-network
+    volumes:
+      - temporal-es-vol:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -E 'green|yellow'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  temporal-postgresql:
+    container_name: temporal-postgresql
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_USER: temporal
+    networks:
+      - temporal-network
+    volumes:
+      - temporal-pg-vol:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  temporal:
+    container_name: temporal
+    ports:
+      - '7233:7233'
+    image: temporalio/auto-setup:1.28.1
+    depends_on:
+      temporal-postgresql:
+        condition: service_healthy
+      temporal-elasticsearch:
+        condition: service_healthy
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-postgresql
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - ENABLE_ES=true
+      - ES_SEEDS=temporal-elasticsearch
+      - ES_VERSION=v7
+      - TEMPORAL_NAMESPACE=default
+    networks:
+      - temporal-network
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+
+  temporal-ui:
+    container_name: temporal-ui
+    image: temporalio/ui:2.34.0
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    networks:
+      - temporal-network
+    ports:
+      - '8080:8080'
+    depends_on:
+      - temporal
 
 volumes:
   pgdata:
+  postiz-postgres-vol:
+  postiz-redis-data:
+  postiz-config:
+  postiz-uploads:
+  temporal-es-vol:
+  temporal-pg-vol:
   node_modules:
+
+networks:
+  postiz-network:
+    driver: bridge
+  temporal-network:
+    driver: bridge
