@@ -54,12 +54,16 @@ export const generateBrandedImageTask: TaskConfig<{ input: GenerateBrandedImageI
       }
 
       // 3. Generate the image
+      const isSports = tenant.name.toLowerCase().includes('sport')
+      const templateType = isSports ? 'sports' : 'real-estate'
+
       const brandedBuffer = await generateBrandedImage({
         imageUrl: base64Image,
         price,
         title,
         agencyLogo: logoUrl || undefined,
         primaryColor: tenant.branding?.primaryColor || undefined,
+        templateType,
       })
 
       // 4. Save the generated image as a NEW Media record

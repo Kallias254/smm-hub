@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { RealEstateTemplate01 } from './templates/RealEstateTemplate01'
+import { SportsTemplate01 } from './templates/SportsTemplate01'
 import React from 'react'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -19,10 +20,15 @@ export async function generateBrandedImage(data: {
   title: string
   agencyLogo?: string
   primaryColor?: string
+  templateType?: 'real-estate' | 'sports'
 }) {
+  // Select Template based on type
+  // In a real system, this could look up a component from a registry map
+  const Template = data.templateType === 'sports' ? SportsTemplate01 : RealEstateTemplate01
+
   // 1. Render to SVG via Satori
   const svg = await satori(
-    React.createElement(RealEstateTemplate01, data),
+    React.createElement(Template, data),
     {
       width: 1080,
       height: 1350,

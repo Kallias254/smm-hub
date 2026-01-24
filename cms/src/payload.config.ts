@@ -22,6 +22,15 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      afterNavLinks: ['/components/NavIntegrationsLink'],
+      views: {
+        integrations: {
+          Component: '/components/IntegrationsView',
+          path: '/integrations',
+        },
+      },
+    },
   },
   collections: [Users, Media, Tenants, Campaigns, Posts, Payments],
   jobs: {
