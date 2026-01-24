@@ -26,8 +26,8 @@
 *   **FCM Status:** Currently **Mocked**. CMS logs notification events; Mobile app requires manual refresh or FCM credentials (`google-services.json`) for real push.
 *   **Next:** Add Auth login screen to the mobile app.
 
-**Phase 5: Monetization & Polish (Days 15+) - ⏳ PENDING**
-*   Integrate Daraja API (STK Push).
+**Phase 5: Monetization & Polish (Days 15+) - 🚧 IN PROGRESS**
+*   Integrate Daraja API (STK Push) - (Completed: `Payments` collection + `daraja.ts` service with Mock fallback).
 *   Build the "Dashboard" (Payload Custom Views for Analytics).
 *   **Pannellum Integration:** Add the 360 viewer custom component to the Admin UI.
 

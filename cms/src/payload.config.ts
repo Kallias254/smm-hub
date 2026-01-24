@@ -10,6 +10,7 @@ import { Media } from './collections/Media'
 import { Tenants } from './collections/Tenants'
 import { Campaigns } from './collections/Campaigns'
 import { Posts } from './collections/Posts'
+import { Payments } from './collections/Payments'
 import { tasks } from './tasks'
 
 const filename = fileURLToPath(import.meta.url)
@@ -22,7 +23,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Tenants, Campaigns, Posts],
+  collections: [Users, Media, Tenants, Campaigns, Posts, Payments],
   jobs: {
     tasks,
     autoRun: [
