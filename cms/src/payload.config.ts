@@ -13,6 +13,7 @@ import { Posts } from './collections/Posts'
 import { ContentGroups } from './collections/ContentGroups'
 import { Payments } from './collections/Payments'
 import { tasks } from './tasks'
+import { s3Storage } from '@payloadcms/storage-s3'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -54,5 +55,21 @@ export default buildConfig({
     },
   }),
   sharp,
-  plugins: [],
+  plugins: [
+    s3Storage({
+      collections: {
+        media: true,
+      },
+      bucket: process.env.S3_BUCKET || '',
+      config: {
+        endpoint: process.env.S3_ENDPOINT,
+        forcePathStyle: true,
+        region: process.env.S3_REGION || 'us-east-1',
+        credentials: {
+          accessKeyId: process.env.S3_ACCESS_KEY || '',
+          secretAccessKey: process.env.S3_SECRET_KEY || '',
+        },
+      },
+    }),
+  ],
 })
