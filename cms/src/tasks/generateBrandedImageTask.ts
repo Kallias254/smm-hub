@@ -6,9 +6,8 @@ import fs from 'fs'
 interface GenerateBrandedImageInput {
   postId: string
   mediaId: string
-  price: string
-  title: string
   tenantId: string
+  data: any // Dynamic block data
 }
 
 interface GenerateBrandedImageOutput {
@@ -21,7 +20,7 @@ export const generateBrandedImageTask: TaskConfig<{ input: GenerateBrandedImageI
   slug: 'generateBrandedImage',
   handler: async ({ req, input }) => {
     const { payload } = req
-    const { postId, mediaId, price, title, tenantId } = input
+    const { postId, mediaId, tenantId, data } = input
 
     try {
       // 1. Fetch Media and Tenant branding
@@ -54,23 +53,18 @@ export const generateBrandedImageTask: TaskConfig<{ input: GenerateBrandedImageI
       }
 
       // 3. Generate the image
-      const isSports = tenant.name.toLowerCase().includes('sport')
-      const templateType = isSports ? 'sports' : 'real-estate'
-
       const brandedBuffer = await generateBrandedImage({
         imageUrl: base64Image,
-        price,
-        title,
         agencyLogo: logoUrl || undefined,
         primaryColor: tenant.branding?.primaryColor || undefined,
-        templateType,
+        data: data, // Pass the block data (contains price, title, teams, etc.)
       })
 
       // 4. Save the generated image as a NEW Media record
       const generatedMedia = await payload.create({
         collection: 'media',
         data: {
-          alt: `Branded: ${title}`,
+          alt: `Branded Image`,
           tenant: Number(tenantId),
         },
         file: {

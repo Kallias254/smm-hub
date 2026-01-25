@@ -2,15 +2,31 @@ import { TaskConfig } from 'payload'
 import ffmpeg from 'fluent-ffmpeg'
 import path from 'path'
 import fs from 'fs'
-import { generateBrandedImage } from '../creative-engine/generator'
 import os from 'os'
+import satori from 'satori'
+import sharp from 'sharp'
+import React from 'react'
+import { GlassIntro, LowerThird, OutroCard, WatermarkTemplate } from '../creative-engine/templates/video/VideoAssets'
+
+// Load Font Helper
+const fontPath = path.resolve(process.cwd(), 'public/fonts/Roboto-Bold.ttf')
+const fontData = fs.readFileSync(fontPath)
+
+async function generateAsset(Component: any, props: any, outputPath: string) {
+  const svg = await satori(React.createElement(Component, props), {
+    width: 1080,
+    height: 1920,
+    fonts: [{ name: 'Roboto', data: fontData, weight: 700, style: 'normal' }],
+  })
+  const buffer = await sharp(Buffer.from(svg)).png().toBuffer()
+  fs.writeFileSync(outputPath, buffer)
+}
 
 interface GenerateBrandedVideoInput {
   postId: string
   mediaId: string
-  price: string
-  title: string
   tenantId: string
+  data: any
 }
 
 interface GenerateBrandedVideoOutput {
@@ -23,7 +39,7 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
   slug: 'generateBrandedVideo',
   handler: async ({ req, input }) => {
     const { payload } = req
-    const { postId, mediaId, price, title, tenantId } = input
+    const { postId, mediaId, tenantId, data } = input
     const tmpDir = path.join(os.tmpdir(), `video-${Date.now()}`)
     fs.mkdirSync(tmpDir, { recursive: true })
 
@@ -33,47 +49,76 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
       const tenant = await payload.findByID({ collection: 'tenants', id: tenantId })
       
       const rawVideoPath = path.resolve(process.cwd(), 'media', media.filename as string)
-      const introCardPath = path.join(tmpDir, 'intro.png')
-      const outroCardPath = path.join(tmpDir, 'outro.png')
       const outputPath = path.join(tmpDir, 'output.mp4')
+      
+      // 2. Map Data to Template Fields
+      let introTitle = 'NEW POST'
+      let introSub = 'Check this out'
+      let lowerMain = 'SMM HUB'
+      let lowerSub = 'Click for details'
+      
+      const brandingColor = tenant.branding?.primaryColor || '#fbbf24'
+      const agencyName = tenant.name || 'SMM HUB'
 
-      // 2. Generate Intro/Outro PNGs via Satori
-      // Using a slightly different title for intro/outro
-      const introBuffer = await generateBrandedImage({
-        imageUrl: '', // Blank or logo background
-        price: 'JUST LISTED',
-        title: title,
-        primaryColor: tenant.branding?.primaryColor || undefined,
-      })
-      fs.writeFileSync(introCardPath, introBuffer)
+      if (data.template === 'real-estate-listing') {
+        introTitle = 'JUST LISTED'
+        introSub = data.location || 'Prime Location'
+        lowerMain = data.price || 'Contact for Price'
+        lowerSub = data.features || 'View Details'
+      } else if (data.template === 'sports-fixture') {
+        introTitle = 'MATCH DAY'
+        introSub = data.league || 'Upcoming Fixture'
+        lowerMain = `${data.homeTeam} vs ${data.awayTeam}`
+        lowerSub = data.matchTime || 'Coming Soon'
+      }
 
-      const outroBuffer = await generateBrandedImage({
-        imageUrl: '', 
-        price: 'CALL NOW',
-        title: 'Contact Agency',
-        primaryColor: tenant.branding?.primaryColor || undefined,
-      })
-      fs.writeFileSync(outroCardPath, outroBuffer)
+      // 3. Generate Overlays
+      await generateAsset(WatermarkTemplate, { text: agencyName }, path.join(tmpDir, 'watermark.png'))
+      await generateAsset(GlassIntro, { title: introTitle, subtitle: introSub, color: brandingColor }, path.join(tmpDir, 'intro.png'))
+      await generateAsset(LowerThird, { mainText: lowerMain, subText: lowerSub, color: brandingColor }, path.join(tmpDir, 'lower.png'))
+      await generateAsset(OutroCard, { ctaText: 'CONTACT US', contactInfo: agencyName, color: brandingColor }, path.join(tmpDir, 'outro.png'))
 
-      // 3. FFmpeg Processing: Intro (2s) + Main (10s) + Outro (2s)
-      // This is a simplified version. A real one would involve concatenation and scaling.
+      // 4. FFmpeg Processing (Overlay Mode)
+      // Using fixed 10s duration for MVP stability, can be dynamic later
       await new Promise((resolve, reject) => {
         ffmpeg()
-          .input(introCardPath).loop(2)
-          .input(rawVideoPath)
-          .input(outroCardPath).loop(2)
-          .on('error', reject)
+          .input(rawVideoPath).inputOptions(['-t 10']) 
+          .input(path.join(tmpDir, 'intro.png')).inputOptions(['-loop 1', '-t 10'])
+          .input(path.join(tmpDir, 'lower.png')).inputOptions(['-loop 1', '-t 10'])
+          .input(path.join(tmpDir, 'watermark.png')).inputOptions(['-loop 1', '-t 10'])
+          .input(path.join(tmpDir, 'outro.png')).inputOptions(['-loop 1', '-t 10'])
+
+          .complexFilter([
+              // Scale to Vertical 1080x1920
+              '[0:v]scale=1080:1920,setsar=1[base]',
+
+              // Intro (0-3s)
+              '[base][1:v]overlay=0:0:enable=\'between(t,0,3)\'[v1]',
+              // Lower Third (3-8s)
+              '[v1][2:v]overlay=0:0:enable=\'between(t,3,8)\'[v2]',
+              // Watermark (0-8s)
+              '[v2][3:v]overlay=0:0:enable=\'between(t,0,8)\'[v3]',
+              // Outro (8-10s)
+              '[v3][4:v]overlay=0:0:enable=\'between(t,8,10)\'[v]'
+          ])
+          .outputOptions([
+            '-map [v]', 
+            '-pix_fmt yuv420p',
+            '-c:v libx264',
+            '-preset ultrafast'
+          ])
+          .save(outputPath)
           .on('end', resolve)
-          .mergeToFile(outputPath, tmpDir)
+          .on('error', reject)
       })
 
       const finalVideoBuffer = fs.readFileSync(outputPath)
 
-      // 4. Save to Media
+      // 5. Save to Media
       const generatedMedia = await payload.create({
         collection: 'media',
         data: {
-          alt: `Branded Video: ${title}`,
+          alt: `Branded Video: ${introTitle}`,
           tenant: Number(tenantId),
         },
         file: {
@@ -84,7 +129,7 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
         },
       })
 
-      // 5. Update Post
+      // 6. Update Post
       await payload.update({
         collection: 'posts',
         id: postId,

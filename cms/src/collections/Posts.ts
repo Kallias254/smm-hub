@@ -1,9 +1,10 @@
 import { CollectionConfig } from 'payload'
+import { RealEstateListing, SportsFixture } from '../blocks/CreativeBlocks'
 
 export const Posts: CollectionConfig = {
   slug: 'posts',
   admin: {
-    useAsTitle: 'title',
+    useAsTitle: 'internalName',
     group: 'Marketing',
   },
   access: {
@@ -22,21 +23,29 @@ export const Posts: CollectionConfig = {
           const isVideo = rawMedia.mimeType?.startsWith('video/')
           const taskSlug = isVideo ? 'generateBrandedVideo' : 'generateBrandedImage'
 
+          // Extract Data from the first Content Block
+          const activeBlock = doc.content?.[0]
+          let creativeData = {}
+
+          if (activeBlock) {
+             creativeData = {
+               template: activeBlock.blockType,
+               ...activeBlock
+             }
+          }
+
           await req.payload.jobs.queue({
             task: taskSlug,
             input: {
               postId: doc.id,
               mediaId: doc.assets.rawMedia,
-              price: doc.price || 'Contact for Price',
-              title: doc.title || 'Property for Sale',
               tenantId: doc.tenant,
+              data: creativeData, // Pass the flexible data bundle
             },
           })
         }
 
         // 2. Distribution Trigger
-        // If status changes to "Queued" AND we have branded media, send it!
-        // (In a real app, a Cron Job might pick this up instead, but this is an instant trigger for demo)
         if (
           doc.distributionStatus === 'queued' && 
           previousDoc?.distributionStatus !== 'queued' &&
@@ -55,19 +64,23 @@ export const Posts: CollectionConfig = {
   },
   fields: [
     {
-      name: 'title',
+      name: 'internalName',
       type: 'text',
       required: true,
-      admin: {
-        description: 'Heading for the branded graphic',
-      },
+      label: 'Internal Title (Admin Only)',
     },
     {
-      name: 'price',
-      type: 'text',
+      name: 'content',
+      type: 'blocks',
       required: true,
+      minRows: 1,
+      maxRows: 1,
+      blocks: [
+        RealEstateListing,
+        SportsFixture,
+      ],
       admin: {
-        description: 'Price display (e.g. KES 5,000,000)',
+        description: 'Select the type of content to generate (Real Estate or Sports)',
       },
     },
     {

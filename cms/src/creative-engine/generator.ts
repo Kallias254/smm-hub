@@ -3,8 +3,8 @@ import sharp from 'sharp'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { RealEstateTemplate01 } from './templates/RealEstateTemplate01'
-import { SportsTemplate01 } from './templates/SportsTemplate01'
+import { RealEstateTemplate01 } from './templates/real-estate/RealEstateTemplate01'
+import { SportsTemplate01 } from './templates/sports/SportsTemplate01'
 import React from 'react'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -14,21 +14,32 @@ const __dirname = path.dirname(__filename)
 const fontPath = path.resolve(__dirname, '../../public/fonts/Roboto-Bold.ttf')
 const fontData = fs.readFileSync(fontPath)
 
-export async function generateBrandedImage(data: {
+export async function generateBrandedImage(input: {
   imageUrl: string
-  price: string
-  title: string
   agencyLogo?: string
   primaryColor?: string
-  templateType?: 'real-estate' | 'sports'
+  data: any // Flexible data from the Block
 }) {
-  // Select Template based on type
-  // In a real system, this could look up a component from a registry map
-  const Template = data.templateType === 'sports' ? SportsTemplate01 : RealEstateTemplate01
+  const { data } = input
+  
+  // Select Template based on Block Type (slug)
+  let Template: any = RealEstateTemplate01 // Default
+
+  if (data.template === 'sports-fixture') {
+    Template = SportsTemplate01
+  } else if (data.template === 'real-estate-listing') {
+    Template = RealEstateTemplate01
+  }
 
   // 1. Render to SVG via Satori
+  // We pass the entire 'data' object + global branding props
   const svg = await satori(
-    React.createElement(Template, data),
+    React.createElement(Template, {
+      ...data,
+      imageUrl: input.imageUrl,
+      agencyLogo: input.agencyLogo,
+      primaryColor: input.primaryColor
+    }),
     {
       width: 1080,
       height: 1350,
