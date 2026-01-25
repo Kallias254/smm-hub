@@ -88,12 +88,56 @@ export const Posts: CollectionConfig = {
       type: 'relationship',
       relationTo: 'tenants',
       required: true,
+      hooks: {
+        beforeValidate: [
+          ({ req, value }) => {
+            // Auto-assign tenant for non-admins
+            if (req.user && req.user.role !== 'admin' && req.user.tenant) {
+              const myTenantId = typeof req.user.tenant === 'object' ? req.user.tenant.id : req.user.tenant
+              return myTenantId
+            }
+            return value
+          }
+        ]
+      },
+      admin: {
+        position: 'sidebar',
+        condition: (data, siblingData, { user }) => user?.role === 'admin',
+      },
     },
     {
       name: 'campaign',
       type: 'relationship',
       relationTo: 'campaigns',
-      required: true,
+      required: false, // Optional: Evergreen posts might not belong to a specific campaign
+    },
+    {
+      name: 'contentGroup',
+      type: 'relationship',
+      relationTo: 'content-groups',
+      label: 'Content Library (Optional)',
+      admin: {
+        description: 'If set, this post belongs to an Evergreen Library.',
+      },
+    },
+    {
+        name: 'usageStats',
+        type: 'group',
+        admin: {
+            position: 'sidebar',
+            readOnly: true,
+        },
+        fields: [
+            {
+                name: 'usageCount',
+                type: 'number',
+                defaultValue: 0,
+            },
+            {
+                name: 'lastUsedAt',
+                type: 'date',
+            }
+        ]
     },
     {
       name: 'caption',
@@ -119,22 +163,61 @@ export const Posts: CollectionConfig = {
           name: 'scheduledAt',
           type: 'date',
           admin: {
-            position: 'sidebar',
+            width: '50%',
           },
         },
         {
-          name: 'distributionStatus',
+          name: 'recurrenceInterval',
           type: 'select',
-          defaultValue: 'pending',
+          defaultValue: 'none',
           options: [
-            { label: 'Pending Approval', value: 'pending' },
-            { label: 'Queued', value: 'queued' },
-            { label: 'Published', value: 'published' },
-            { label: 'Failed', value: 'failed' },
+            { label: 'None (One-off)', value: 'none' },
+            { label: 'Daily', value: 'daily' },
+            { label: 'Weekly', value: 'weekly' },
+            { label: 'Monthly', value: 'monthly' },
           ],
           admin: {
-            position: 'sidebar',
+            width: '50%',
+            description: 'Auto-repost this content periodically (e.g. Vacant Listings)',
           },
+        },
+      ],
+    },
+    {
+      name: 'distributionStatus',
+      type: 'select',
+      defaultValue: 'pending',
+      options: [
+        { label: 'Pending Approval', value: 'pending' },
+        { label: 'Queued', value: 'queued' },
+        { label: 'Published', value: 'published' }, // For one-offs
+        { label: 'Recurring (Active)', value: 'recurring' }, // Visual helper
+        { label: 'Failed', value: 'failed' },
+      ],
+      admin: {
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'distributionLogs',
+      type: 'array',
+      label: 'Publication History',
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+      },
+      fields: [
+        {
+          name: 'timestamp',
+          type: 'date',
+        },
+        {
+          name: 'status',
+          type: 'text',
+        },
+        {
+          name: 'destination',
+          type: 'text',
         },
       ],
     },

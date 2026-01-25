@@ -10,6 +10,7 @@ import { Media } from './collections/Media'
 import { Tenants } from './collections/Tenants'
 import { Campaigns } from './collections/Campaigns'
 import { Posts } from './collections/Posts'
+import { ContentGroups } from './collections/ContentGroups'
 import { Payments } from './collections/Payments'
 import { tasks } from './tasks'
 
@@ -32,7 +33,7 @@ export default buildConfig({
       },
     },
   },
-  collections: [Users, Media, Tenants, Campaigns, Posts, Payments],
+  collections: [Users, Media, Tenants, Campaigns, Posts, ContentGroups, Payments],
   jobs: {
     tasks,
     autoRun: [

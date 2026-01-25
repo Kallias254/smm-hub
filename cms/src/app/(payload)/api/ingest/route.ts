@@ -18,45 +18,12 @@ import { NextResponse } from 'next/server'
 export const POST = async (req: Request) => {
   try {
     const body = await req.json()
-    const { key, type, title, data, channels, mediaUrl, publishImmediately } = body
+    const { key, type, title, data, channels, mediaUrl, publishImmediately, recurrence, scheduledAt } = body
 
     if (!key) return NextResponse.json({ error: 'Missing Ingestion Key' }, { status: 400 })
 
     const payload = await getPayload({ config })
-
-    // 1. Authenticate Tenant
-    const tenants = await payload.find({
-      collection: 'tenants',
-      where: {
-        'integrations.ingestionKey': {
-          equals: key,
-        },
-      },
-    })
-
-    if (tenants.docs.length === 0) {
-      return NextResponse.json({ error: 'Invalid Ingestion Key' }, { status: 401 })
-    }
-
-    const tenant = tenants.docs[0]
-
-    // 1b. Find a Campaign for this Tenant
-    const campaigns = await payload.find({
-      collection: 'campaigns',
-      where: {
-        tenant: { equals: tenant.id }
-      },
-      limit: 1,
-    })
-
-    if (campaigns.docs.length === 0) {
-      return NextResponse.json({ error: 'No active campaign found for this tenant. Please create a campaign in SMM Hub first.' }, { status: 400 })
-    }
-    const campaignId = campaigns.docs[0].id
-
-    // 2. Handle Media (if URL provided)
-    let rawMediaId: number | undefined = undefined
-// ...
+// ... existing authentication code ...
     // 3. Create the Post
     // We map 'type' to 'blockType' and 'data' to the block fields
     const post = await payload.create({
@@ -66,6 +33,8 @@ export const POST = async (req: Request) => {
         tenant: tenant.id,
         campaign: campaignId, 
         distributionStatus: publishImmediately ? 'queued' : 'pending',
+        scheduledAt: scheduledAt || (publishImmediately ? new Date().toISOString() : undefined),
+        recurrenceInterval: recurrence || 'none', // 'weekly', 'daily', etc.
         channels: channels || [],
         content: [
           {

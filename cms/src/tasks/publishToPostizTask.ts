@@ -126,19 +126,63 @@ export const publishToPostizTask: TaskConfig<{ input: PublishToPostizInput, outp
 
       // 6. Update Status based on outcomes
       let finalStatus = 'failed'
+      let nextScheduledDate = post.scheduledAt ? new Date(post.scheduledAt) : new Date()
+      let shouldRecur = false
+
       if (postizSuccess && manualSuccess) {
-        // If we have manual channels, we stay 'queued' for the agent to action
-        finalStatus = manualChannels.length > 0 ? 'queued' : 'published'
+        // Success path
+        if (post.recurrenceInterval && post.recurrenceInterval !== 'none') {
+           shouldRecur = true
+           // Calculate next date
+           const intervalMap: Record<string, number> = {
+             'daily': 1,
+             'weekly': 7,
+             'monthly': 30 // Approximate, or use a date library for precision
+           }
+           const daysToAdd = intervalMap[post.recurrenceInterval] || 0
+           nextScheduledDate.setDate(nextScheduledDate.getDate() + daysToAdd)
+           
+           // If the calculated date is in the past (e.g. system was down), keep adding until it's future
+           while (nextScheduledDate < new Date()) {
+             nextScheduledDate.setDate(nextScheduledDate.getDate() + daysToAdd)
+           }
+
+           finalStatus = 'queued' // Put back in queue for the Cron to pick up next time
+        } else {
+           finalStatus = manualChannels.length > 0 ? 'queued' : 'published'
+        }
       } else if (postizSuccess && !manualSuccess) {
-        finalStatus = 'queued' // Partial success
+        finalStatus = 'queued' // Partial success, retry manual?
+      }
+
+      // Prepare update data
+      const updateData: any = {
+        distributionStatus: finalStatus,
+      }
+
+      // Handle History Logging & Recurrence Update
+      if (postizSuccess) {
+        const newLog = {
+          timestamp: new Date().toISOString(),
+          status: 'success',
+          destination: 'Postiz' + (manualSuccess ? ' + Mobile' : '')
+        }
+        
+        // We need to append to existing logs. 
+        // Note: In a Task, 'post' is the state BEFORE this run.
+        const currentLogs = post.distributionLogs || []
+        updateData.distributionLogs = [newLog, ...currentLogs] // Newest first
+
+        if (shouldRecur) {
+          console.log(`[Recurrence] Post ${postId} set to recur on ${nextScheduledDate.toISOString()}`)
+          updateData.scheduledAt = nextScheduledDate.toISOString()
+        }
       }
 
       await payload.update({
         collection: 'posts',
         id: postId,
-        data: {
-          distributionStatus: finalStatus as any,
-        },
+        data: updateData,
       })
 
       return {

@@ -72,6 +72,7 @@ export interface Config {
     tenants: Tenant;
     campaigns: Campaign;
     posts: Post;
+    'content-groups': ContentGroup;
     payments: Payment;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
@@ -86,6 +87,7 @@ export interface Config {
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     campaigns: CampaignsSelect<false> | CampaignsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
+    'content-groups': ContentGroupsSelect<false> | ContentGroupsSelect<true>;
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
@@ -194,6 +196,10 @@ export interface Tenant {
      * API Key for the dedicated Postiz Workspace
      */
     postizApiKey?: string | null;
+    /**
+     * Secret Key for external apps to push data to SMM Hub
+     */
+    ingestionKey?: string | null;
   };
   updatedAt: string;
   createdAt: string;
@@ -268,8 +274,16 @@ export interface Post {
         blockType: 'sports-fixture';
       }
   )[];
-  tenant: number | Tenant;
-  campaign: number | Campaign;
+  tenant?: (number | null) | Tenant;
+  campaign?: (number | null) | Campaign;
+  /**
+   * If set, this post belongs to an Evergreen Library.
+   */
+  contentGroup?: (number | null) | ContentGroup;
+  usageStats?: {
+    usageCount?: number | null;
+    lastUsedAt?: string | null;
+  };
   caption?: {
     root: {
       type: string;
@@ -287,7 +301,19 @@ export interface Post {
   } | null;
   channels?: ('facebook' | 'instagram' | 'linkedin' | 'twitter' | 'whatsapp_status')[] | null;
   scheduledAt?: string | null;
-  distributionStatus?: ('pending' | 'queued' | 'published' | 'failed') | null;
+  /**
+   * Auto-repost this content periodically (e.g. Vacant Listings)
+   */
+  recurrenceInterval?: ('none' | 'daily' | 'weekly' | 'monthly') | null;
+  distributionStatus?: ('pending' | 'queued' | 'published' | 'recurring' | 'failed') | null;
+  distributionLogs?:
+    | {
+        timestamp?: string | null;
+        status?: string | null;
+        destination?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   assets?: {
     rawMedia?: (number | null) | Media;
     /**
@@ -295,6 +321,28 @@ export interface Post {
      */
     brandedMedia?: (number | null) | Media;
   };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "content-groups".
+ */
+export interface ContentGroup {
+  id: number;
+  title: string;
+  tenant: number | Tenant;
+  status?: ('active' | 'paused') | null;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  timeOfDay: string;
+  dayOfWeek?: ('0' | '1' | '2' | '3' | '4' | '5' | '6') | null;
+  /**
+   * How should we pick the next post from this group?
+   */
+  strategy?: ('cycle' | 'shuffle') | null;
+  nextRun?: string | null;
+  lastRun?: string | null;
+  channels?: ('facebook' | 'instagram' | 'linkedin' | 'twitter' | 'whatsapp_status')[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -464,6 +512,10 @@ export interface PayloadLockedDocument {
         value: number | Post;
       } | null)
     | ({
+        relationTo: 'content-groups';
+        value: number | ContentGroup;
+      } | null)
+    | ({
         relationTo: 'payments';
         value: number | Payment;
       } | null);
@@ -577,6 +629,7 @@ export interface TenantsSelect<T extends boolean = true> {
     | T
     | {
         postizApiKey?: T;
+        ingestionKey?: T;
       };
   updatedAt?: T;
   createdAt?: T;
@@ -627,16 +680,50 @@ export interface PostsSelect<T extends boolean = true> {
       };
   tenant?: T;
   campaign?: T;
+  contentGroup?: T;
+  usageStats?:
+    | T
+    | {
+        usageCount?: T;
+        lastUsedAt?: T;
+      };
   caption?: T;
   channels?: T;
   scheduledAt?: T;
+  recurrenceInterval?: T;
   distributionStatus?: T;
+  distributionLogs?:
+    | T
+    | {
+        timestamp?: T;
+        status?: T;
+        destination?: T;
+        id?: T;
+      };
   assets?:
     | T
     | {
         rawMedia?: T;
         brandedMedia?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "content-groups_select".
+ */
+export interface ContentGroupsSelect<T extends boolean = true> {
+  title?: T;
+  tenant?: T;
+  status?: T;
+  frequency?: T;
+  timeOfDay?: T;
+  dayOfWeek?: T;
+  strategy?: T;
+  nextRun?: T;
+  lastRun?: T;
+  channels?: T;
   updatedAt?: T;
   createdAt?: T;
 }

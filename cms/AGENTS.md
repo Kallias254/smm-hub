@@ -31,6 +31,33 @@ src/
 └── payload.config.ts        # Main config
 ```
 
+## Social Media Hub Architecture
+
+This project implements a "Hub and Spoke" architecture for Social Media Management.
+
+### Core Concepts
+
+1.  **Ingest (Listening)**:
+    -   Endpoint: `POST /api/ingest`
+    -   Receives content from external sources (Spokes).
+    -   Creates `Posts` in `pending` or `queued` state.
+
+2.  **Creative Engine**:
+    -   Collection: `Posts` (Hook: `afterChange`)
+    -   Detects new raw media.
+    -   Generates branded assets (Images/Videos) via `generateBrandedVideo` tasks.
+
+3.  **Distribution**:
+    -   Task: `publishToPostiz`
+    -   Pushes content to Postiz (Automated Channels) or notifies Mobile App (Manual Channels).
+    -   Handles Recurrence looping.
+
+4.  **Evergreen Content (Libraries)**:
+    -   Collection: `ContentGroups` (e.g. "Monday Motivation").
+    -   Logic: Cron Job `POST /api/cron/process-groups`.
+    -   Strategy: Pick a post from the group (Cycle/Shuffle), Publish, Reschedule Group.
+    -   Posts in a Group are "Library Items" and are reused.
+
 ## Configuration
 
 ### Minimal Config Pattern
