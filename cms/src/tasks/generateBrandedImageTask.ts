@@ -24,14 +24,18 @@ export const generateBrandedImageTask: TaskConfig<{ input: GenerateBrandedImageI
 
     try {
       // 1. Fetch Media and Tenant branding
+      // Handle populated objects
+      const safeMediaId = typeof mediaId === 'object' && mediaId !== null ? (mediaId as any).id : mediaId
+      const safeTenantId = typeof tenantId === 'object' && tenantId !== null ? (tenantId as any).id : tenantId
+
       const media = await payload.findByID({
         collection: 'media',
-        id: mediaId,
+        id: safeMediaId,
       })
 
       const tenant = await payload.findByID({
         collection: 'tenants',
-        id: tenantId,
+        id: safeTenantId,
       })
 
       // 2. Prepare generation data

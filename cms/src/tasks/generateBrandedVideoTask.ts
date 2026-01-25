@@ -45,8 +45,14 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
 
     try {
       // 1. Fetch Assets
-      const media = await payload.findByID({ collection: 'media', id: mediaId })
-      const tenant = await payload.findByID({ collection: 'tenants', id: tenantId })
+      // Handle case where mediaId is already a populated object
+      const safeMediaId = typeof mediaId === 'object' && mediaId !== null ? (mediaId as any).id : mediaId
+      
+      const media = await payload.findByID({ collection: 'media', id: safeMediaId })
+      
+      // Handle case where tenantId is already a populated object
+      const safeTenantId = typeof tenantId === 'object' && tenantId !== null ? (tenantId as any).id : tenantId
+      const tenant = await payload.findByID({ collection: 'tenants', id: safeTenantId })
       
       const rawVideoPath = path.resolve(process.cwd(), 'media', media.filename as string)
       const outputPath = path.join(tmpDir, 'output.mp4')

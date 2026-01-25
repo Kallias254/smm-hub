@@ -4,7 +4,7 @@ import { RealEstateListing, SportsFixture } from '../blocks/CreativeBlocks'
 export const Posts: CollectionConfig = {
   slug: 'posts',
   admin: {
-    useAsTitle: 'internalName',
+    useAsTitle: 'title',
     group: 'Marketing',
   },
   access: {
@@ -40,7 +40,7 @@ export const Posts: CollectionConfig = {
               postId: doc.id,
               mediaId: doc.assets.rawMedia,
               tenantId: doc.tenant,
-              data: creativeData, // Pass the flexible data bundle
+              data: creativeData,
             },
           })
         }
@@ -64,7 +64,7 @@ export const Posts: CollectionConfig = {
   },
   fields: [
     {
-      name: 'internalName',
+      name: 'title',
       type: 'text',
       required: true,
       label: 'Internal Title (Admin Only)',

@@ -244,14 +244,30 @@ export interface Campaign {
  */
 export interface Post {
   id: number;
-  /**
-   * Heading for the branded graphic
-   */
   title: string;
   /**
-   * Price display (e.g. KES 5,000,000)
+   * Select the type of content to generate (Real Estate or Sports)
    */
-  price: string;
+  content: (
+    | {
+        price: string;
+        location: string;
+        features?: string | null;
+        id?: string | null;
+        blockName?: string | null;
+        blockType: 'real-estate-listing';
+      }
+    | {
+        league?: string | null;
+        homeTeam: string;
+        awayTeam: string;
+        matchTime: string;
+        prediction?: string | null;
+        id?: string | null;
+        blockName?: string | null;
+        blockType: 'sports-fixture';
+      }
+  )[];
   tenant: number | Tenant;
   campaign: number | Campaign;
   caption?: {
@@ -585,7 +601,30 @@ export interface CampaignsSelect<T extends boolean = true> {
  */
 export interface PostsSelect<T extends boolean = true> {
   title?: T;
-  price?: T;
+  content?:
+    | T
+    | {
+        'real-estate-listing'?:
+          | T
+          | {
+              price?: T;
+              location?: T;
+              features?: T;
+              id?: T;
+              blockName?: T;
+            };
+        'sports-fixture'?:
+          | T
+          | {
+              league?: T;
+              homeTeam?: T;
+              awayTeam?: T;
+              matchTime?: T;
+              prediction?: T;
+              id?: T;
+              blockName?: T;
+            };
+      };
   tenant?: T;
   campaign?: T;
   caption?: T;
