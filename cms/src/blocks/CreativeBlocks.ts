@@ -1,72 +1,35 @@
 import { Block } from 'payload'
 
 export const RealEstateListing: Block = {
-  slug: 'real-estate-listing', // Template Key
-  labels: {
-    singular: 'Real Estate Listing',
-    plural: 'Real Estate Listings',
-  },
+  slug: 'real-estate-listing',
+  imageURL: 'https://payloadcms.com/images/blocks/content.png',
+  imageAltText: 'Real Estate Content',
   fields: [
     {
-      name: 'price',
-      type: 'text',
-      label: 'Price (e.g. KES 15M)',
+      name: 'data',
+      type: 'json',
       required: true,
-    },
-    {
-      name: 'location',
-      type: 'text',
-      label: 'Location (e.g. Kilimani)',
-      required: true,
-    },
-    {
-      name: 'features',
-      type: 'text',
-      label: 'Key Features (e.g. 4 Bed | 3 Bath)',
+      label: 'Listing Data (JSON)',
+      admin: {
+        description: 'Flexible JSON data: { price, location, features: [], agent: {} }',
+      },
     },
   ],
 }
 
 export const SportsFixture: Block = {
-  slug: 'sports-fixture', // Template Key
-  labels: {
-    singular: 'Sports Fixture',
-    plural: 'Sports Fixtures',
-  },
+  slug: 'sports-fixture',
+  imageURL: 'https://payloadcms.com/images/blocks/content.png',
+  imageAltText: 'Sports Content',
   fields: [
     {
-      name: 'league',
-      type: 'text',
-      label: 'League (e.g. Premier League)',
-      defaultValue: 'Premier League',
-    },
-    {
-      type: 'row',
-      fields: [
-        {
-          name: 'homeTeam',
-          type: 'text',
-          label: 'Home Team',
-          required: true,
-        },
-        {
-          name: 'awayTeam',
-          type: 'text',
-          label: 'Away Team',
-          required: true,
-        },
-      ],
-    },
-    {
-      name: 'matchTime',
-      type: 'text',
-      label: 'Time (e.g. 15:00 EAT)',
+      name: 'data',
+      type: 'json',
       required: true,
-    },
-    {
-      name: 'prediction',
-      type: 'text',
-      label: 'Prediction (Optional)',
+      label: 'Fixture/Bet Data (JSON)',
+      admin: {
+        description: 'Flexible JSON data: { matches: [], league, predictions, slipCode }',
+      },
     },
   ],
 }

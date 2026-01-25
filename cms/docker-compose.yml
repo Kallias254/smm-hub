@@ -1,14 +1,16 @@
 services:
   # --- REAL ESTATE CMS (PAYLOAD) ---
   payload:
-    image: node:22-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     ports:
       - '3000:3000'
     volumes:
       - .:/home/node/app
       - node_modules:/home/node/app/node_modules
     working_dir: /home/node/app/
-    command: sh -c "apk add --no-cache ffmpeg && corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
+    command: pnpm dev
     depends_on:
       - postgres
     env_file:

@@ -39,7 +39,7 @@ export const POST = async (req: Request) => {
         content: [
           {
             blockType: type, // e.g. 'real-estate-listing'
-            ...data
+            data: data
           }
         ],
         assets: {

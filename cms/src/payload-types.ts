@@ -256,19 +256,35 @@ export interface Post {
    */
   content: (
     | {
-        price: string;
-        location: string;
-        features?: string | null;
+        /**
+         * Flexible JSON data: { price, location, features: [], agent: {} }
+         */
+        data:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
         id?: string | null;
         blockName?: string | null;
         blockType: 'real-estate-listing';
       }
     | {
-        league?: string | null;
-        homeTeam: string;
-        awayTeam: string;
-        matchTime: string;
-        prediction?: string | null;
+        /**
+         * Flexible JSON data: { matches: [], league, predictions, slipCode }
+         */
+        data:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
         id?: string | null;
         blockName?: string | null;
         blockType: 'sports-fixture';
@@ -660,20 +676,14 @@ export interface PostsSelect<T extends boolean = true> {
         'real-estate-listing'?:
           | T
           | {
-              price?: T;
-              location?: T;
-              features?: T;
+              data?: T;
               id?: T;
               blockName?: T;
             };
         'sports-fixture'?:
           | T
           | {
-              league?: T;
-              homeTeam?: T;
-              awayTeam?: T;
-              matchTime?: T;
-              prediction?: T;
+              data?: T;
               id?: T;
               blockName?: T;
             };

@@ -27,10 +27,10 @@ export const Posts: CollectionConfig = {
           const activeBlock = doc.content?.[0]
           let creativeData = {}
 
-          if (activeBlock) {
+          if (activeBlock && activeBlock.data) {
              creativeData = {
                template: activeBlock.blockType,
-               ...activeBlock
+               ...activeBlock.data as object
              }
           }
 
