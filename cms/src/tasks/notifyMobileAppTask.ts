@@ -1,44 +1,50 @@
 import { TaskConfig } from 'payload'
-import * as admin from 'firebase-admin'
 import path from 'path'
 import fs from 'fs'
 
 // Lazy initialization of Firebase Admin
 let firebaseInitialized = false
 
-function initFirebase() {
+async function initFirebase() {
   if (firebaseInitialized) return true
 
   try {
+    // Dynamically import firebase-admin only on the server
+    const admin = await import('firebase-admin')
+
     // 1. Try environment variable (Base64 encoded JSON)
     if (process.env.FIREBASE_CREDENTIALS) {
       const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_CREDENTIALS, 'base64').toString('utf-8'))
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      })
+      if (admin.apps.length === 0) {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount)
+        })
+      }
       firebaseInitialized = true
       console.log('✅ Firebase Admin initialized via Environment Variable')
-      return true
+      return admin
     }
 
     // 2. Try local file (google-services.json or service-account.json)
     const localKeyPath = path.resolve(process.cwd(), 'service-account.json')
     if (fs.existsSync(localKeyPath)) {
       const serviceAccount = JSON.parse(fs.readFileSync(localKeyPath, 'utf8'))
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      })
+      if (admin.apps.length === 0) {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount)
+        })
+      }
       firebaseInitialized = true
       console.log('✅ Firebase Admin initialized via Local File')
-      return true
+      return admin
     }
 
     console.warn('⚠️ Firebase Credentials not found. Notifications will be MOCKED.')
-    return false
+    return null
 
   } catch (err) {
     console.error('❌ Failed to initialize Firebase:', err)
-    return false
+    return null
   }
 }
 
@@ -61,14 +67,10 @@ export const notifyMobileAppTask: TaskConfig<{ input: NotifyMobileAppInput, outp
     const { postId, channels, title } = input
 
     try {
-      const isLive = initFirebase()
+      const admin = await initFirebase()
       const messageBody = `New post ready for: ${channels.join(', ')}`
       
-      if (isLive) {
-        // Fetch Agent Tokens (This is a stub - in real life you'd query the 'Users' collection)
-        // const agents = await payload.find({ collection: 'users', where: { role: { equals: 'agent' } } })
-        // const tokens = agents.docs.map(u => u.fcmToken).filter(Boolean)
-        
+      if (admin) {
         // For MVP, we assume a "Topic" subscription or a hardcoded token for testing if available
         const condition = "'smm_agents' in topics"
 
