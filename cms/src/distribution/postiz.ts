@@ -17,27 +17,38 @@ export interface PostizPostOptions {
 export class PostizClient {
   private get config() {
     return {
-      apiKey: process.env.POSTIZ_API_KEY || '',
+      defaultApiKey: process.env.POSTIZ_API_KEY || '',
       apiUrl: process.env.POSTIZ_API_URL || 'http://localhost:5000/api',
     }
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const { apiUrl, apiKey } = this.config
+  private async request<T>(endpoint: string, options: RequestInit & { apiKey?: string } = {}): Promise<T> {
+    const { apiUrl, defaultApiKey } = this.config
+    const apiKey = options.apiKey || defaultApiKey
     const url = `${apiUrl}${endpoint}`
     
     if (!apiKey) {
-      throw new Error('POSTIZ_API_KEY is not configured in .env')
+      throw new Error('POSTIZ_API_KEY is not provided and not configured in .env')
     }
 
     const headers = {
-      'Authorization': `${apiKey}`,
+      'Authorization': `Bearer ${apiKey}`, // Ensure Bearer scheme if required, or just apiKey depending on Postiz auth
       'Content-Type': 'application/json',
       ...options.headers,
     }
+    
+    // Postiz usually expects just the key in Authorization header or Bearer + key. 
+    // Based on previous code: 'Authorization': `${apiKey}`
+    // I will revert to exactly what was there to be safe: `${apiKey}`
+    // But usually it is Bearer. Let's stick to the previous implementation: `${apiKey}`
+    const finalHeaders = {
+        'Authorization': `${apiKey}`,
+        'Content-Type': 'application/json',
+        ...options.headers,
+    }
 
     console.log(`[Postiz] Requesting: ${url}`)
-    const response = await fetch(url, { ...options, headers })
+    const response = await fetch(url, { ...options, headers: finalHeaders })
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -47,11 +58,11 @@ export class PostizClient {
     return response.json() as Promise<T>
   }
 
-  async getIntegrations(): Promise<PostizIntegration[]> {
-    return this.request<PostizIntegration[]>('/public/v1/integrations')
+  async getIntegrations(apiKey?: string): Promise<PostizIntegration[]> {
+    return this.request<PostizIntegration[]>('/public/v1/integrations', { apiKey })
   }
 
-  async createPost(data: PostizPostOptions) {
+  async createPost(data: PostizPostOptions, apiKey?: string) {
     const postsPayload = data.integrationIds.map((integrationId) => ({
       integration: {
         id: integrationId,
@@ -75,6 +86,7 @@ export class PostizClient {
     return this.request('/public/v1/posts', {
       method: 'POST',
       body: JSON.stringify(payload),
+      apiKey,
     })
   }
 }

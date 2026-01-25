@@ -7,9 +7,38 @@ export const Tenants: CollectionConfig = {
     group: 'Organization',
   },
   access: {
-    // We will lock this down later to ensure users only see their own tenant
-    read: () => true,
-    create: () => true, 
+    read: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      
+      // Users can only see their own tenant
+      if (user.tenant) {
+        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+        return {
+          id: {
+            equals: tenantId,
+          },
+        }
+      }
+      return false
+    },
+    create: ({ req: { user } }) => user?.role === 'admin',
+    update: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      
+      // Agency Owners can update their own tenant
+      if (user.role === 'tenant_owner' && user.tenant) {
+        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+        return {
+          id: {
+            equals: tenantId,
+          },
+        }
+      }
+      return false
+    },
+    delete: ({ req: { user } }) => user?.role === 'admin',
   },
   fields: [
     {
@@ -70,6 +99,19 @@ export const Tenants: CollectionConfig = {
             { label: 'Cancelled', value: 'cancelled' },
           ],
           defaultValue: 'active',
+        },
+      ],
+    },
+    {
+      name: 'integrations',
+      type: 'group',
+      fields: [
+        {
+          name: 'postizApiKey',
+          type: 'text',
+          admin: {
+            description: 'API Key for the dedicated Postiz Workspace',
+          },
         },
       ],
     },

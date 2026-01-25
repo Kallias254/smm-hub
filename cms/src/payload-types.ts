@@ -189,6 +189,12 @@ export interface Tenant {
     mpesaShortcode?: string | null;
     subscriptionStatus?: ('active' | 'past_due' | 'cancelled') | null;
   };
+  integrations?: {
+    /**
+     * API Key for the dedicated Postiz Workspace
+     */
+    postizApiKey?: string | null;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -550,6 +556,11 @@ export interface TenantsSelect<T extends boolean = true> {
     | {
         mpesaShortcode?: T;
         subscriptionStatus?: T;
+      };
+  integrations?:
+    | T
+    | {
+        postizApiKey?: T;
       };
   updatedAt?: T;
   createdAt?: T;

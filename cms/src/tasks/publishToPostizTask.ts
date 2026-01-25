@@ -47,6 +47,15 @@ export const publishToPostizTask: TaskConfig<{ input: PublishToPostizInput, outp
         ? extractTextFromLexical(post.caption.root)
         : 'Check out this property!'
 
+      // 1b. Get Tenant API Key
+      let tenantApiKey: string | undefined = undefined
+      if (post.tenant && typeof post.tenant === 'object') {
+        const tenant = post.tenant as any
+        tenantApiKey = tenant.integrations?.postizApiKey
+      }
+
+      console.log(`[PublishTask] Publishing for Tenant: ${(post.tenant as any)?.name || 'Unknown'} (Key: ${tenantApiKey ? 'Present' : 'Global Fallback'})`)
+
       // 2. Resolve the Branded Media URL
       let mediaUrl = ''
       if (typeof post.assets?.brandedMedia === 'object' && post.assets.brandedMedia?.url) {
@@ -67,8 +76,8 @@ export const publishToPostizTask: TaskConfig<{ input: PublishToPostizInput, outp
       // 4. Handle Automated Channels (Postiz)
       if (automatedChannelKeys.length > 0) {
         try {
-          // Fetch available integrations from Postiz to find IDs
-          const integrations = await postiz.getIntegrations()
+          // Fetch available integrations from Postiz to find IDs (Using Tenant Key)
+          const integrations = await postiz.getIntegrations(tenantApiKey)
           
           // Map internal keys (e.g. 'facebook') to Postiz Integration IDs
           // We assume the Postiz 'identifier' matches our keys, or we do a best-guess match
@@ -86,7 +95,7 @@ export const publishToPostizTask: TaskConfig<{ input: PublishToPostizInput, outp
               mediaUrls: mediaUrl ? [mediaUrl] : [],
               integrationIds: targetIntegrationIds,
               scheduledAt: post.scheduledAt || undefined
-            })
+            }, tenantApiKey) // Pass Tenant Key
             postizSuccess = true
           } else {
              console.warn('⚠️ No matching Postiz integrations found for:', automatedChannelKeys)
