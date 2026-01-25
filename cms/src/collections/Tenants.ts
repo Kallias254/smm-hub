@@ -84,6 +84,25 @@ export const Tenants: CollectionConfig = {
       type: 'group',
       fields: [
         {
+          name: 'plan',
+          type: 'select',
+          defaultValue: 'starter',
+          options: [
+            { label: 'Starter', value: 'starter' },
+            { label: 'Pro', value: 'pro' },
+            { label: 'Agency', value: 'agency' },
+          ],
+        },
+        {
+          name: 'credits',
+          type: 'number',
+          defaultValue: 20,
+          label: 'Video Generation Credits',
+          admin: {
+            description: 'Remaining credits for branded video generation',
+          },
+        },
+        {
           name: 'mpesaShortcode',
           type: 'text',
           admin: {

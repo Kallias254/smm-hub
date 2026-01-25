@@ -45,16 +45,37 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
 
     try {
       // 1. Fetch Assets
-      // Handle case where mediaId is already a populated object
       const safeMediaId = typeof mediaId === 'object' && mediaId !== null ? (mediaId as any).id : mediaId
-      
       const media = await payload.findByID({ collection: 'media', id: safeMediaId })
       
-      // Handle case where tenantId is already a populated object
       const safeTenantId = typeof tenantId === 'object' && tenantId !== null ? (tenantId as any).id : tenantId
       const tenant = await payload.findByID({ collection: 'tenants', id: safeTenantId })
       
-      const rawVideoPath = path.resolve(process.cwd(), 'media', media.filename as string)
+      // 1b. Credit Check
+      const currentCredits = tenant.billing?.credits ?? 0
+      if (currentCredits <= 0) {
+          throw new Error(`Tenant ${tenant.name} has no remaining video credits.`)
+      }
+
+      // 1c. Resolve Video Path (S3 / Local Hybrid)
+      let rawVideoPath = ''
+      if (media.url && (media.url.startsWith('http') || media.url.startsWith('//'))) {
+          // It's in S3/MinIO, we must download it to process with FFmpeg locally
+          const downloadPath = path.join(tmpDir, 'raw_input.mp4')
+          const downloadUrl = media.url.startsWith('//') ? `http:${media.url}` : media.url
+          
+          console.log(`[VideoTask] Downloading remote media for processing: ${downloadUrl}`)
+          const response = await fetch(downloadUrl)
+          if (!response.ok) throw new Error(`Failed to download raw video from S3: ${response.statusText}`)
+          
+          const buffer = Buffer.from(await response.arrayBuffer())
+          fs.writeFileSync(downloadPath, buffer)
+          rawVideoPath = downloadPath
+      } else {
+          // Fallback to local disk (legacy)
+          rawVideoPath = path.resolve(process.cwd(), 'media', media.filename as string)
+      }
+
       const outputPath = path.join(tmpDir, 'output.mp4')
       
       // 2. Map Data to Template Fields
@@ -135,7 +156,7 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
         },
       })
 
-      // 6. Update Post
+      // 6. Update Post & Deduct Credit
       await payload.update({
         collection: 'posts',
         id: postId,
@@ -145,6 +166,19 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
           },
         },
       })
+
+      await payload.update({
+        collection: 'tenants',
+        id: safeTenantId,
+        data: {
+          billing: {
+            ...tenant.billing,
+            credits: currentCredits - 1,
+          }
+        }
+      })
+
+      console.log(`[VideoTask] Success. 1 credit deducted from ${tenant.name}. Remaining: ${currentCredits - 1}`)
 
       return { output: { success: true, generatedMediaId: generatedMedia.id } }
     } catch (error: any) {

@@ -185,6 +185,11 @@ export interface Tenant {
     logo?: (number | null) | Media;
   };
   billing?: {
+    plan?: ('starter' | 'pro' | 'agency') | null;
+    /**
+     * Remaining credits for branded video generation
+     */
+    credits?: number | null;
     /**
      * Paybill or Till Number for this client
      */
@@ -638,6 +643,8 @@ export interface TenantsSelect<T extends boolean = true> {
   billing?:
     | T
     | {
+        plan?: T;
+        credits?: T;
         mpesaShortcode?: T;
         subscriptionStatus?: T;
       };
