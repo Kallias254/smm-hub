@@ -113,6 +113,13 @@ export const Tenants: CollectionConfig = {
             description: 'API Key for the dedicated Postiz Workspace',
           },
         },
+        {
+          name: 'ingestionKey',
+          type: 'text',
+          admin: {
+            description: 'Secret Key for external apps to push data to SMM Hub',
+          },
+        },
       ],
     },
   ],
