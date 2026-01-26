@@ -15,6 +15,7 @@ export const GET = async () => {
 
     let apiKey: string | undefined = undefined
     let tenantName = 'Global System'
+    let tenantSlug = 'global'
 
     if (user.tenant) {
       const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
@@ -24,6 +25,7 @@ export const GET = async () => {
       })
       
       tenantName = tenant.name
+      tenantSlug = tenant.slug
       // Access the key from the 'integrations' group as defined in Tenants.ts
       apiKey = (tenant as any).integrations?.postizApiKey
 
@@ -31,20 +33,36 @@ export const GET = async () => {
       if (!apiKey) {
         return NextResponse.json({ 
           integrations: [], 
-          tenantName, 
+          tenantName,
+          tenantSlug,
           missingKey: true 
         })
       }
     }
 
     // Fetch integrations using the specific key (or global fallback if admin has no tenant)
-    const integrations = await postiz.getIntegrations(apiKey)
+    try {
+      const integrations = await postiz.getIntegrations(apiKey)
 
-    return NextResponse.json({
-      integrations,
-      tenantName,
-      missingKey: false
-    })
+      return NextResponse.json({
+        integrations,
+        tenantName,
+        tenantSlug,
+        missingKey: false
+      })
+    } catch (postizError: any) {
+      // If the error is specifically about a missing key, handle it gracefully
+      if (postizError.message.includes('not provided')) {
+        return NextResponse.json({
+          integrations: [],
+          tenantName,
+          tenantSlug,
+          missingKey: true
+        })
+      }
+      // Re-throw other unexpected errors (e.g. network timeout)
+      throw postizError
+    }
 
   } catch (error: any) {
     console.error('API Error:', error)

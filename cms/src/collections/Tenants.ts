@@ -1,10 +1,14 @@
 import { CollectionConfig } from 'payload'
+import { createPostizWorkspace } from './Tenants/hooks/createPostizWorkspace'
 
 export const Tenants: CollectionConfig = {
   slug: 'tenants',
   admin: {
     useAsTitle: 'name',
     group: 'Organization',
+  },
+  hooks: {
+    afterChange: [createPostizWorkspace],
   },
   access: {
     read: ({ req: { user } }) => {
@@ -129,7 +133,8 @@ export const Tenants: CollectionConfig = {
           name: 'postizApiKey',
           type: 'text',
           admin: {
-            description: 'API Key for the dedicated Postiz Workspace',
+            readOnly: true,
+            description: 'Automatically provisioned API Key for the dedicated Postiz Workspace',
           },
         },
         {

@@ -4,6 +4,12 @@ import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
+import dotenv from 'dotenv'
+
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
+
+dotenv.config({ path: path.resolve(dirname, '../.env') })
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
@@ -14,9 +20,6 @@ import { ContentGroups } from './collections/ContentGroups'
 import { Payments } from './collections/Payments'
 import { tasks } from './tasks'
 import { s3Storage } from '@payloadcms/storage-s3'
-
-const filename = fileURLToPath(import.meta.url)
-const dirname = path.dirname(filename)
 
 export default buildConfig({
   admin: {

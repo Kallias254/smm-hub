@@ -1,32 +1,72 @@
-// import dotenv from 'dotenv'
+import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// dotenv.config({ path: path.resolve(__dirname, '../.env') })
+dotenv.config({ path: path.resolve(__dirname, '../.env') })
 
 import { getPayload } from 'payload'
 import config from './payload.config'
 import fs from 'fs'
+import { S3Client, CreateBucketCommand, HeadBucketCommand } from '@aws-sdk/client-s3'
 
 async function seed() {
   console.log('🌱 Starting Seed Demo...')
+
+  // 0. Ensure Bucket Exists
+  if (process.env.S3_ENABLED === 'true') {
+    console.log('🪣 Checking S3 Bucket...')
+    const s3 = new S3Client({
+      endpoint: process.env.S3_ENDPOINT,
+      forcePathStyle: true,
+      region: process.env.S3_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY || '',
+        secretAccessKey: process.env.S3_SECRET_KEY || '',
+      },
+    })
+
+    const bucketName = process.env.S3_BUCKET || 'smm-hub-media'
+    try {
+      await s3.send(new HeadBucketCommand({ Bucket: bucketName }))
+      console.log(`🪣 Bucket "${bucketName}" already exists.`)
+    } catch (err: any) {
+      console.log(`🪣 Bucket "${bucketName}" not found. Creating...`)
+      await s3.send(new CreateBucketCommand({ Bucket: bucketName }))
+      console.log(`🪣 Bucket "${bucketName}" created.`)
+    }
+  }
+
   const payload = await getPayload({ config })
 
   // 1. Create a Tenant
-  console.log('🏢 Creating Tenant: Getin Sports...')
-  const tenant = await payload.create({
+  console.log('🏢 Checking/Creating Tenant: Getin Sports...')
+  const existingTenants = await payload.find({
     collection: 'tenants',
-    data: {
-      name: 'Getin Sports',
-      slug: 'getin-sports',
-      branding: {
-        primaryColor: '#00ff00', // Sports Green
-      },
-    },
+    where: {
+      slug: { equals: 'getin-sports' }
+    }
   })
+
+  let tenant: any
+  if (existingTenants.docs.length > 0) {
+    console.log('🏢 Tenant already exists, using existing.')
+    tenant = existingTenants.docs[0]
+  } else {
+    console.log('🏢 Creating new Tenant...')
+    tenant = await payload.create({
+      collection: 'tenants',
+      data: {
+        name: 'Getin Sports',
+        slug: 'getin-sports',
+        branding: {
+          primaryColor: '#00ff00', // Sports Green
+        },
+      },
+    })
+  }
 
   // 2. Create a Campaign
   console.log('📅 Creating Campaign: Match Day Showcase...')
@@ -84,9 +124,11 @@ async function seed() {
       content: [
         {
           blockType: 'real-estate-listing',
-          price: 'KES 45,000,000',
-          location: 'Lavington, Nairobi',
-          features: '4 Bed | 4 Bath | Garden',
+          data: {
+            price: 'KES 45,000,000',
+            location: 'Lavington, Nairobi',
+            features: '4 Bed | 4 Bath | Garden',
+          }
         }
       ],
       assets: {
@@ -106,11 +148,13 @@ async function seed() {
       content: [
         {
           blockType: 'sports-fixture',
-          league: 'Premier League',
-          homeTeam: 'Arsenal',
-          awayTeam: 'Man City',
-          matchTime: '22:00 EAT',
-          prediction: 'Home Win 2-1',
+          data: {
+            league: 'Premier League',
+            homeTeam: 'Arsenal',
+            awayTeam: 'Man City',
+            matchTime: '22:00 EAT',
+            prediction: 'Home Win 2-1',
+          }
         }
       ],
       assets: {

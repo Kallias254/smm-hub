@@ -1,7 +1,19 @@
+'use client'
+
 import React from 'react'
 import Link from 'next/link'
+import { useAuth } from '@payloadcms/ui'
 
 const NavIntegrationsLink: React.FC = () => {
+  const { user } = useAuth()
+
+  // Only show the Integrations link if the user is assigned to a tenant
+  // or if they are a superadmin who explicitly wants to see global integrations.
+  // For now, we hide it for global admins without a tenant to clean up the UI.
+  if (!user || !user.tenant) {
+    return null
+  }
+
   return (
     <div style={{ marginTop: '20px', padding: '0 20px' }}>
       <Link 
@@ -24,3 +36,4 @@ const NavIntegrationsLink: React.FC = () => {
 }
 
 export default NavIntegrationsLink
+

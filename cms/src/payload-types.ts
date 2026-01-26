@@ -198,7 +198,7 @@ export interface Tenant {
   };
   integrations?: {
     /**
-     * API Key for the dedicated Postiz Workspace
+     * Automatically provisioned API Key for the dedicated Postiz Workspace
      */
     postizApiKey?: string | null;
     /**

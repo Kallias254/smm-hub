@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 
 const IntegrationsList: React.FC = () => {
-  const [data, setData] = useState<{ integrations: any[], tenantName: string, missingKey?: boolean } | null>(null)
+  const [data, setData] = useState<{ integrations: any[], tenantName: string, tenantSlug: string, missingKey?: boolean } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,7 +40,13 @@ const IntegrationsList: React.FC = () => {
     )
   }
 
-  const { integrations, tenantName, missingKey } = data || { integrations: [], tenantName: 'System' }
+  const { integrations, tenantName, tenantSlug, missingKey } = data || { integrations: [], tenantName: 'System', tenantSlug: 'global' }
+
+  // Construction of the Postiz URL
+  // If Postiz supports workspace-based routing, we append the slug.
+  // Otherwise, we keep it at the base launches page.
+  const postizBaseUrl = 'http://localhost:4007'
+  const postizWorkspaceUrl = tenantSlug === 'global' ? `${postizBaseUrl}/launches` : `${postizBaseUrl}/launches?workspace=${tenantSlug}`
 
   return (
     <div style={{ padding: '40px' }}>
@@ -62,7 +68,7 @@ const IntegrationsList: React.FC = () => {
           <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', background: '#f7fafc', border: '2px dashed #e2e8f0', borderRadius: '12px' }}>
             <p>No channels connected yet.</p>
             <a 
-              href="http://localhost:4007/launches" 
+              href={postizWorkspaceUrl} 
               target="_blank" 
               rel="noopener noreferrer"
               style={{ display: 'inline-block', marginTop: '10px', padding: '10px 20px', background: '#3182ce', color: 'white', borderRadius: '6px', textDecoration: 'none' }}
@@ -110,7 +116,11 @@ const IntegrationsList: React.FC = () => {
         <div style={{ marginTop: '60px', padding: '20px', background: '#ebf8ff', borderRadius: '8px', border: '1px solid #bee3f8' }}>
           <h3>Settings</h3>
           <p>To add more channels, access the distribution console:</p>
-          <code style={{ background: 'white', padding: '4px 8px', borderRadius: '4px' }}>http://localhost:4007</code>
+          <code style={{ background: 'white', padding: '4px 8px', borderRadius: '4px' }}>
+            <a href={postizWorkspaceUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+              {postizWorkspaceUrl}
+            </a>
+          </code>
         </div>
       )}
     </div>

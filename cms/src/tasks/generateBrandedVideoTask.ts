@@ -6,10 +6,14 @@ import os from 'os'
 import satori from 'satori'
 import sharp from 'sharp'
 import React from 'react'
+import { fileURLToPath } from 'url'
 import { GlassIntro, LowerThird, OutroCard, WatermarkTemplate } from '../creative-engine/templates/video/VideoAssets'
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 // Load Font Helper
-const fontPath = path.resolve(process.cwd(), 'public/fonts/Roboto-Bold.ttf')
+const fontPath = path.resolve(__dirname, '../../public/fonts/Roboto-Bold.ttf')
 const fontData = fs.readFileSync(fontPath)
 
 async function generateAsset(Component: any, props: any, outputPath: string) {
