@@ -7,14 +7,31 @@
 
 # --- POSTIZ (SOCIAL DISTRIBUTION) ---
 *.postiz.localhost, postiz.localhost {
-	# Handle CORS for subdomains
+	# Force CORS headers at the proxy level
 	header {
-		Access-Control-Allow-Origin *
+		Access-Control-Allow-Origin {header.Origin}
 		Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-		Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+		Access-Control-Allow-Headers "*"
+		Access-Control-Allow-Credentials "true"
 		defer
 	}
 
-	# Route directly to the internal Next.js app, bypassing internal Nginx
-	reverse_proxy postiz:4200
+	# Handle OPTIONS preflight locally if needed, or pass to backend
+	@options {
+		method OPTIONS
+	}
+	handle @options {
+		header Access-Control-Allow-Origin {header.Origin}
+		header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+		header Access-Control-Allow-Headers "*"
+		header Access-Control-Allow-Credentials "true"
+		respond "" 204
+	}
+
+	# Route to the internal orchestrator
+	reverse_proxy postiz:5000 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+	}
 }

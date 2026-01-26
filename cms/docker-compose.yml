@@ -59,9 +59,9 @@ services:
     restart: always
     environment:
       # === Required Settings
-      MAIN_URL: 'http://postiz.localhost'
-      FRONTEND_URL: 'http://postiz.localhost'
-      # Using a relative path for the backend API allows the browser to hit the same subdomain
+      MAIN_URL: 'https://postiz.localhost'
+      FRONTEND_URL: 'https://postiz.localhost'
+      # Relative URL is key for wildcard subdomain same-origin fetching
       NEXT_PUBLIC_BACKEND_URL: '/api'
       JWT_SECRET: 'official-secret-key-gitroom-1234567890'
       DATABASE_URL: 'postgresql://postiz-user:postiz-password@postiz-postgres:5432/postiz-db-local'

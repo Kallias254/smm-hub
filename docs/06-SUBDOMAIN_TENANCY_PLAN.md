@@ -1,95 +1,76 @@
 # Subdomain Multi-Tenancy Architecture: SMM Hub + Postiz
 
-## 1. The Strategy
-We are moving from URL parameters (`?workspace=slug`) to **Subdomain Isolation**. This is the professional standard for SaaS, ensuring that a tenant is "immersed" in their own environment.
+## 1. Status: IMPLEMENTED (Level 2)
+We have successfully transitioned from URL parameters (`?workspace=slug`) to **Subdomain Isolation**. This provides a professional "immersed" experience where each tenant operates in their own scoped environment.
 
-### URL Structure
-- **Global Admin**: `admin.smmhub.localhost`
-- **Agency A SMM Hub**: `agency-a.smmhub.localhost/admin`
-- **Agency A Postiz**: `agency-a.postiz.localhost`
-
----
-
-## 2. Payload CMS Changes (`Tenants` Collection)
-
-### Schema Updates
-We need to add a `subdomain` field to the `Tenants` collection. This field will be the "Identity Key" for the entire stack.
-
-- **Field**: `subdomain`
-- **Properties**: `Unique`, `Required`, `Pattern: ^[a-z0-9-]+$`
-- **Validation**: Ensure it doesn't clash with protected subdomains (e.g., `www`, `api`, `admin`).
-
-### Provisioning Hook Update
-The `afterChange` hook must ensure that the `Organization` slug in Postiz matches the `subdomain` in SMM Hub. This keeps the URL mapping 1:1.
+### URL Structure (Local Dev)
+- **Global Admin**: `https://admin.smmhub.localhost/admin`
+- **Agency Hub**: `https://{subdomain}.smmhub.localhost/admin`
+- **Agency Postiz**: `https://{subdomain}.postiz.localhost`
 
 ---
 
-## 3. Caddy Configuration (The Reverse Proxy)
+## 2. Implementation Details
 
-Caddy will act as the traffic controller. It will automatically handle SSL and route requests based on the subdomain.
+### A. Payload CMS (`Tenants` Collection)
+- Added `subdomain` field: Mandatory, unique, regex validated (`^[a-z0-9-]+$`).
+- Protected subdomains (www, admin, api, etc.) are restricted via validation hook.
+- `postizApiKey` is now `readOnly` in Admin UI as it is auto-provisioned.
 
-### `Caddyfile` Example
+### B. Automated Provisioning
+- The `afterChange` hook on `Tenants` now uses the `subdomain` as the official `slug` for the Postiz Organization.
+- Direct SQL insertion into Postiz `Organization` and `UserOrganization` tables ensures real, persistent workspaces and owner linking.
+
+### C. Caddy Reverse Proxy
+- Acts as the single entry point for all traffic.
+- Handles wildcard SSL/TLS for `*.smmhub.localhost` and `*.postiz.localhost`.
+- Manages CORS headers and preflight `OPTIONS` requests at the edge.
+- Routes Postiz traffic directly to internal orchestrator (port 5000) while preserving Host headers.
+
+### D. Multi-Tenant Middleware
+- `src/middleware.ts` extracts the subdomain from the Host header.
+- Injects `X-Tenant-Subdomain` into request headers.
+- Allows global access for protected subdomains while enforcing isolation for agency subdomains.
+
+---
+
+## 3. Configuration Summary
+
+### Caddyfile Key Logic
 ```caddy
-# SMM HUB - MAIN APP & API
-*.smmhub.localhost {
-    reverse_proxy localhost:3000
-}
-
-# POSTIZ - SOCIAL DISTRIBUTION
 *.postiz.localhost {
-    reverse_proxy localhost:4007
-}
-
-# GLOBAL ADMIN (Optional separate route)
-admin.smmhub.localhost {
-    reverse_proxy localhost:3000
-}
-```
-
----
-
-## 4. Multi-Tenant Middleware (Next.js)
-
-We implement a `middleware.ts` in SMM Hub to detect the tenant from the host.
-
-```typescript
-// Conceptual Middleware Logic
-export function middleware(request: NextRequest) {
-  const host = request.headers.get('host'); // e.g., nebula.smmhub.localhost
-  const subdomain = host.split('.')[0];
-  
-  // 1. If subdomain is 'admin', allow global access
-  // 2. Otherwise, verify subdomain exists in Tenants collection
-  // 3. Inject Tenant ID into the request headers for Payload to use
+    header {
+        Access-Control-Allow-Origin {header.Origin}
+        Access-Control-Allow-Credentials "true"
+    }
+    reverse_proxy postiz:5000 {
+        header_up Host {host}
+    }
 }
 ```
 
----
-
-## 5. Spoke Integration (The "Hub & Spoke" Flow)
-
-Spoke agencies (external apps) will now have a cleaner integration:
-
-1. **Endpoint**: `https://{agency-slug}.smmhub.com/api/ingest`
-2. **Benefit**: The Hub automatically knows the tenant context from the URL.
-3. **Isolation**: If Agency A sends a request to Agency B's subdomain, it will fail even with a valid key, adding a layer of security.
+### Postiz Environment Key Settings
+- `NEXT_PUBLIC_BACKEND_URL: '/api'` (Relative path for same-origin reliability).
+- `MAIN_URL` & `FRONTEND_URL` set to `https://postiz.localhost`.
 
 ---
 
-## 6. Implementation Checklist
+## 4. Operational Commands
 
-1. [ ] **Payload**: Add `subdomain` field to `Tenants.ts`.
-2. [ ] **Payload**: Update `createPostizWorkspace` hook to use the `subdomain` as the Postiz Org slug.
-3. [ ] **Caddy**: Create a `Caddyfile` and add it to `docker-compose.yml`.
-4. [ ] **Next.js**: Implement `middleware.ts` to enforce tenant isolation at the routing level.
-5. [ ] **UI**: Update `IntegrationsList.tsx` to link to `https://{subdomain}.postiz.localhost`.
-
----
-
-## 7. Local Development Tip
-To test this locally without a real domain, add these to your `/etc/hosts` (or use a tool like `dnsmasq`):
+### Adding New Subdomains (Local)
+Add to `/etc/hosts`:
 ```text
-127.0.0.1  admin.smmhub.localhost
-127.0.0.1  nebula.smmhub.localhost
-127.0.0.1  nebula.postiz.localhost
+127.0.0.1  newagency.smmhub.localhost newagency.postiz.localhost
 ```
+
+### Creating Tenants
+```bash
+cd cms && npx tsx src/create-tenant-auto.ts
+```
+
+---
+
+## 5. Next Steps (Level 3)
+- [ ] **Row-Level Security**: Implement access control hooks in SMM Hub that utilize the `X-Tenant-Subdomain` header to auto-filter all collection queries.
+- [ ] **Custom Domain Support**: Add support for agency-owned domains (e.g., `social.nebula.com`).
+- [ ] **Global Dashboard**: Build a system-wide analytics view for Superadmins using the Master Postiz Key.
