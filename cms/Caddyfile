@@ -1,0 +1,20 @@
+# SMM HUB SUBDOMAIN ROUTING (Level 2)
+
+# --- SMM HUB (PAYLOAD CMS) ---
+*.smmhub.localhost, smmhub.localhost {
+	reverse_proxy payload:3000
+}
+
+# --- POSTIZ (SOCIAL DISTRIBUTION) ---
+*.postiz.localhost, postiz.localhost {
+	# Handle CORS for subdomains
+	header {
+		Access-Control-Allow-Origin *
+		Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+		Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+		defer
+	}
+
+	# Route directly to the internal Next.js app, bypassing internal Nginx
+	reverse_proxy postiz:4200
+}

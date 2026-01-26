@@ -21,7 +21,7 @@ export class PostizClient {
   private get config() {
     return {
       defaultApiKey: process.env.POSTIZ_API_KEY || '',
-      apiUrl: process.env.POSTIZ_API_URL || 'http://localhost:5000/api',
+      apiUrl: process.env.POSTIZ_API_URL || 'http://postiz:5000/api',
       // We allow overriding the host via env var, but default to localhost:5440 for local dev outside docker
       databaseUrl: process.env.POSTIZ_DATABASE_URL || 'postgresql://postiz-user:postiz-password@localhost:5440/postiz-db-local'
     }

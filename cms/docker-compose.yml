@@ -1,11 +1,28 @@
 services:
+  # --- REVERSE PROXY (CADDY) ---
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - postiz-network
+    depends_on:
+      - payload
+      - postiz
+
   # --- REAL ESTATE CMS (PAYLOAD) ---
   payload:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    ports:
-      - '3000:3000'
+    # Removed direct port mapping, now handled by Caddy
     volumes:
       - .:/home/node/app
       - node_modules:/home/node/app/node_modules
@@ -17,6 +34,7 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgres://payload:payload@postgres:5432/payload
+      - NEXT_PUBLIC_SERVER_URL=http://admin.smmhub.localhost
     networks:
       - postiz-network
 
@@ -41,9 +59,10 @@ services:
     restart: always
     environment:
       # === Required Settings
-      MAIN_URL: 'http://localhost:4007'
-      FRONTEND_URL: 'http://localhost:4007'
-      NEXT_PUBLIC_BACKEND_URL: 'http://localhost:4007/api'
+      MAIN_URL: 'http://postiz.localhost'
+      FRONTEND_URL: 'http://postiz.localhost'
+      # Using a relative path for the backend API allows the browser to hit the same subdomain
+      NEXT_PUBLIC_BACKEND_URL: '/api'
       JWT_SECRET: 'official-secret-key-gitroom-1234567890'
       DATABASE_URL: 'postgresql://postiz-user:postiz-password@postiz-postgres:5432/postiz-db-local'
       REDIS_URL: 'redis://postiz-redis:6379'
@@ -58,8 +77,7 @@ services:
     volumes:
       - postiz-config:/config/
       - postiz-uploads:/uploads/
-    ports:
-      - "4007:5000"
+    # Removed direct port mapping, now handled by Caddy
     networks:
       - postiz-network
       - temporal-network
@@ -219,6 +237,8 @@ volumes:
   temporal-pg-vol:
   node_modules:
   minio-data:
+  caddy_data:
+  caddy_config:
 
 networks:
   postiz-network:

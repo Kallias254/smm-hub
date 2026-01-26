@@ -18,6 +18,7 @@ async function createTenantAuto() {
 
     const name = 'Nebula Agency'
     const slug = 'nebula-agency'
+    const subdomain = 'nebula'
     const ingestionKey = crypto.randomBytes(16).toString('hex')
 
     // Find the admin user to use as owner
@@ -35,8 +36,9 @@ async function createTenantAuto() {
       data: {
         name,
         slug,
+        subdomain,
         branding: {
-          primaryColor: '#8E44AD', // Purple for Solaris
+          primaryColor: '#8E44AD', // Purple for Nebula
         },
         billing: {
             plan: 'pro',
@@ -67,7 +69,8 @@ async function createTenantAuto() {
     
     if (updatedTenant.integrations?.postizApiKey) {
         console.log('\n✨ SUCCESS: The hook automatically provisioned the Postiz workspace.')
-        console.log(`🔗 Link: http://localhost:4007/launches?workspace=${updatedTenant.slug}`)
+        console.log(`🔗 Hub Link:    http://${updatedTenant.subdomain}.smmhub.localhost/admin`)
+        console.log(`🔗 Postiz Link: http://${updatedTenant.subdomain}.postiz.localhost`)
     }
 
   } catch (error: any) {

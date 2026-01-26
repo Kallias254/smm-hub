@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 
 const IntegrationsList: React.FC = () => {
-  const [data, setData] = useState<{ integrations: any[], tenantName: string, tenantSlug: string, missingKey?: boolean } | null>(null)
+  const [data, setData] = useState<{ integrations: any[], tenantName: string, tenantSlug: string, tenantSubdomain: string, missingKey?: boolean } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,13 +40,14 @@ const IntegrationsList: React.FC = () => {
     )
   }
 
-  const { integrations, tenantName, tenantSlug, missingKey } = data || { integrations: [], tenantName: 'System', tenantSlug: 'global' }
+  const { integrations, tenantName, tenantSlug, tenantSubdomain, missingKey } = data || { integrations: [], tenantName: 'System', tenantSlug: 'global', tenantSubdomain: 'admin' }
 
   // Construction of the Postiz URL
-  // If Postiz supports workspace-based routing, we append the slug.
-  // Otherwise, we keep it at the base launches page.
-  const postizBaseUrl = 'http://localhost:4007'
-  const postizWorkspaceUrl = tenantSlug === 'global' ? `${postizBaseUrl}/launches` : `${postizBaseUrl}/launches?workspace=${tenantSlug}`
+  // Level 2 Architecture: Subdomain isolation
+  // Local dev structure: http://{subdomain}.postiz.localhost:4007
+  const postizWorkspaceUrl = tenantSubdomain === 'admin' 
+    ? 'http://admin.postiz.localhost:4007/launches' 
+    : `http://${tenantSubdomain}.postiz.localhost:4007/launches`
 
   return (
     <div style={{ padding: '40px' }}>

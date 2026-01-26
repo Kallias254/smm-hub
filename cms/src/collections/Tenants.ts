@@ -61,6 +61,26 @@ export const Tenants: CollectionConfig = {
       },
     },
     {
+      name: 'subdomain',
+      type: 'text',
+      unique: true,
+      required: true,
+      admin: {
+        description: 'The subdomain for this agency (e.g. "nebula" for nebula.smmhub.localhost). Use only lowercase letters, numbers, and hyphens.',
+      },
+      validate: (val: string) => {
+        if (!val) return 'Subdomain is required'
+        const pattern = /^[a-z0-9-]+$/
+        if (!pattern.test(val)) return 'Subdomain can only contain lowercase letters, numbers, and hyphens'
+        
+        const protectedSubdomains = ['admin', 'www', 'api', 'dev', 'postiz', 'mail', 'system', 'global']
+        if (protectedSubdomains.includes(val.toLowerCase())) {
+          return `${val} is a protected subdomain and cannot be used.`
+        }
+        return true
+      }
+    },
+    {
       name: 'branding',
       type: 'group',
       fields: [

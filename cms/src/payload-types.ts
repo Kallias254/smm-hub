@@ -174,6 +174,10 @@ export interface Tenant {
    * URL-friendly ID (e.g., nairobi-west-agency)
    */
   slug: string;
+  /**
+   * The subdomain for this agency (e.g. "nebula" for nebula.smmhub.localhost). Use only lowercase letters, numbers, and hyphens.
+   */
+  subdomain: string;
   branding: {
     /**
      * Hex code for branding (e.g., #FF5733)
@@ -634,6 +638,7 @@ export interface MediaSelect<T extends boolean = true> {
 export interface TenantsSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
+  subdomain?: T;
   branding?:
     | T
     | {
