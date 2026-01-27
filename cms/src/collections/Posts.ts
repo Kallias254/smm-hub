@@ -1,5 +1,5 @@
 import { CollectionConfig } from 'payload'
-import { RealEstateListing, SportsFixture } from '../blocks/CreativeBlocks'
+import { RealEstateListing, SportsFixture, RetailProduct, ServicePackage } from '../blocks/CreativeBlocks'
 
 export const Posts: CollectionConfig = {
   slug: 'posts',
@@ -151,6 +151,8 @@ export const Posts: CollectionConfig = {
       blocks: [
         RealEstateListing,
         SportsFixture,
+        RetailProduct,
+        ServicePackage,
       ],
       admin: {
         description: 'Select the type of content to generate (Real Estate or Sports)',

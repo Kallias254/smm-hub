@@ -1,79 +1,79 @@
-# SMM Command Center Hub: Architectural Overview
+# Architecture Overview
 
-**Version:** 1.0 (Senior Architect Draft)
-**Date:** January 23, 2026
+## 1. High-Level Design (The "Factory" Model)
 
-## 1. The Core Philosophy: "The Headless Marketing Brain"
+SMM Hub is not a standard SaaS. It is a **Content Manufacturing Plant**.
 
-This system is not just a CMS; it is an autonomous marketing operating system. It centralizes three critical functions:
-1.  **Creation:** Procedural generation of high-fidelity assets (Satori/FFmpeg).
-2.  **Orchestration:** Approval flows, billing, and scheduling (Payload CMS).
-3.  **Execution:** Automated distribution (Postiz) and assisted manual sharing (Flutter).
+*   **Input:** Raw Data (Property details, Sports scores, Retail items).
+*   **Process:** The Creative Engine (Satori/FFmpeg) applies a "Brand Skin".
+*   **Output:** Finished Social Media Assets (Images/Videos) sent to Postiz.
 
-## 2. System Architecture
+---
 
-```mermaid
-graph TD
-    User[Client/User] -->|Uploads Raw Assets| Payload[Payload CMS v3 (The Brain)]
-    
-    subgraph "The Creative Engine"
-        Payload -->|Job Queue| Satori[Satori (Image Gen)]
-        Payload -->|Job Queue| FFmpeg[FFmpeg (Video Gen)]
-    end
-    
-    subgraph "Distribution"
-        Payload -->|API Hook| Postiz[Postiz (Docker Container)]
-        Postiz -->|API| FB[Facebook/X/LinkedIn]
-        
-        Payload -->|Push Notification| Flutter[Flutter Mobile App]
-        Flutter -->|Manual Share| WhatsApp[WhatsApp Status/Groups]
-    end
-    
-    subgraph "Monetization"
-        Payload -->|STK Push| MPESA[Safaricom Daraja API]
-        MPESA -->|Callback| Payload
-    end
-    
-    Satori -->|Processed Asset| Payload
-    FFmpeg -->|Processed Asset| Payload
-```
+## 2. The Tech Stack
 
-## 3. Technology Stack Selection
+*   **Core CMS:** Payload CMS v3 (Next.js 15).
+*   **Database:** PostgreSQL (Relation-heavy data).
+*   **Queue System:** Payload Jobs (Redis-backed in production).
+*   **Creative Engine:**
+    *   *Images:* Satori (HTML -> SVG -> PNG).
+    *   *Videos:* Remotion / FFmpeg (Programmatic Video).
+*   **Distribution:** Postiz (Self-hosted via Docker).
+*   **Multi-Tenancy:** Subdomain Isolation (`client.smmhub.com`).
 
-*   **Core Logic:** [Payload CMS v3](https://payloadcms.com) (Next.js native).
-    *   *Why:* Best-in-class TypeScript support, native **Jobs Queue** (crucial for video processing), and extensible Admin UI.
-*   **Database:** PostgreSQL.
-    *   *Why:* Robustness for multi-tenant data isolation and complex relational queries.
-*   **Creative Engine:** Satori (Vercel) + FFmpeg.
-    *   *Why:* Satori allows using HTML/CSS to generate images (easier than Canvas). FFmpeg is the industry standard for programmatic video editing.
-*   **Automated Posting:** Postiz (Self-Hosted).
-    *   *Why:* No monthly fees, open-source, robust API for standard social networks.
-*   **Manual Bridge:** Flutter (Android).
-    *   *Why:* Access to native Android intents for sharing to WhatsApp, which has no public posting API.
+---
 
-## 4. Key Niche Adapters
+## 3. Data Flow
 
-### A. Real Estate (The Trust Engine)
-*   **Input:** Panorama images, pricing, location.
-*   **Output:** 360° Web Viewer links, "Just Listed" video cards.
-*   **Lifecycle:** Auto-archive posts when status changes to "Occupied".
+1.  **Ingestion:**
+    *   Manual: Mobile App Upload.
+    *   Automated: `POST /api/ingest` (from Client CRM).
+2.  **Creation:**
+    *   Job: `generateBrandedImage` or `generateBrandedVideo`.
+    *   Cost: Credits deducted from Tenant.
+3.  **Approval:**
+    *   Draft sent to App.
+    *   User clicks "Approve".
+4.  **Distribution:**
+    *   Job: `publishToPostiz`.
+    *   Postiz pushes to FB/IG/LinkedIn.
 
-### B. Sports Prediction (The Win-Bragger)
-*   **Input:** Screenshot of a bet slip.
-*   **Output:** Neon-styled "Winner" graphic overlaying the slip.
-*   **Goal:** Virality on WhatsApp Status.
+---
 
-### C. Retail/Furniture (The Showroom)
-*   **Input:** Raw product photo.
-*   **Output:** Background removed product placed in a luxury "virtual showroom" background.
+## 4. Security & Isolation
 
-## 5. Strategic Decisions (The "Seasoned Dev" Take)
+*   **Row-Level Security (RLS):** Every query is filtered by `user.tenant`.
+*   **Subdomain Routing:** `middleware.ts` enforces `X-Tenant-Subdomain`.
+*   **Ingestion Keys:** Unique per tenant to prevent data pollution.
 
-### Panorama Strategy: Pannellum vs. CloudPano
-**Verdict:** **Use Pannellum (Self-Hosted).**
-*   *Reasoning:* CloudPano is excellent but adds recurring costs and API dependency. For a "Hub" that might handle thousands of listings, client-side rendering with `pannellum.js` or `react-360` is free and performant. We only store the equirectangular JPG in Payload. The viewer handles the rest.
+---
 
-### Dashboard Strategy: Payload vs. Mantine
-**Verdict:** **Extend Payload.**
-*   *Reasoning:* Payload v3's Admin UI is React-based and highly customizable. Building a separate Mantine dashboard duplicates auth logic, API layers, and state management.
-*   *Solution:* Use Payload's [Custom Views](https://payloadcms.com/docs/admin/views) to build the specific "Client Portals" directly inside the CMS. You can import Mantine components *into* Payload custom views if you really need specific UI widgets.
+## 6. Multi-Niche Architecture (The "Block" Strategy)
+
+You asked: *"What if I give you a real estate agent? ... How do we handle niches?"*
+
+We do **not** build separate apps. We use **Blocks**.
+
+### The "One App, Many Skins" Approach
+
+1.  **The Core is Generic:**
+    *   Every post has `Title`, `ScheduledAt`, `Status`.
+    *   This never changes, whether you sell shoes or houses.
+
+2.  **The Difference is in the "Block":**
+    *   We defined specific **Data Blocks** in `CreativeBlocks.ts`:
+        *   `RealEstateListing` Block: Has fields for Price, Location, Features.
+        *   `SportsFixture` Block: Has fields for Team A, Team B, Odds.
+        *   `RetailProduct` Block: Has fields for Price, Sale Price, Stock.
+
+3.  **The Template Router:**
+    *   When the Creative Engine runs, it looks at the Block Type.
+    *   If `type === 'real-estate'`, it loads `RealEstateTemplate01.tsx`.
+    *   If `type === 'retail'`, it loads `ProductTemplate01.tsx`.
+
+### Why this scales
+*   **New Niche = New Template.** You don't rewrite the backend.
+*   **New Client = New Tenant.** You just create "Shoe Palace" as a tenant and give them the Retail Block.
+*   **Centralized Control:** You manage all 50 niches from **One Dashboard**.
+
+*Your SMM Hub is a "Universal Adapter" for social media.*
