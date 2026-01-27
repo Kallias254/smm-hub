@@ -62,37 +62,38 @@ export const Posts: CollectionConfig = {
             id: tenantId,
           })
 
+          // B. Determine Cost based on Media Type
+          const rawMediaId = typeof doc.assets.rawMedia === 'object' ? doc.assets.rawMedia.id : doc.assets.rawMedia
+          const rawMedia = await req.payload.findByID({
+            collection: 'media',
+            id: rawMediaId,
+          })
+          
+          const isVideo = rawMedia.mimeType?.startsWith('video/')
+          const cost = isVideo ? 5 : 1
+          
           const credits = tenant.billing?.credits || 0
 
-          if (credits <= 0) {
-             console.warn(`[CreativeEngine] Skipped generation for Tenant ${tenant.name}: Insufficient Credits (${credits}).`)
-             // Optional: You could update the post to flag this error, but for now we just skip.
+          if (credits < cost) {
+             console.warn(`[CreativeEngine] Skipped generation for Tenant ${tenant.name}: Insufficient Credits (Has: ${credits}, Needs: ${cost}).`)
              return
           }
 
-          // B. Deduct Credit (Optimistic)
-          // We deduct BEFORE queuing to prevent abuse. 
-          // If generation fails later, we can refund (future improvement).
+          // C. Deduct Credit (Optimistic)
           await req.payload.update({
              collection: 'tenants',
              id: tenantId,
              data: {
                 billing: {
                     ...tenant.billing,
-                    credits: credits - 1,
+                    credits: credits - cost,
                 }
              },
              req, // Pass request context to maintain auth/transaction
           })
-          console.log(`[CreativeEngine] Deducted 1 credit from ${tenant.name}. New Balance: ${credits - 1}`)
+          console.log(`[CreativeEngine] Deducted ${cost} credit(s) from ${tenant.name}. New Balance: ${credits - cost}`)
 
-          // C. Proceed with Generation
-          const rawMediaId = typeof doc.assets.rawMedia === 'object' ? doc.assets.rawMedia.id : doc.assets.rawMedia
-          const rawMedia = await req.payload.findByID({
-            collection: 'media',
-            id: rawMediaId,
-          })
-          const isVideo = rawMedia.mimeType?.startsWith('video/')
+          // D. Proceed with Generation
           const taskSlug = isVideo ? 'generateBrandedVideo' : 'generateBrandedImage'
 
           // Extract Data from the first Content Block

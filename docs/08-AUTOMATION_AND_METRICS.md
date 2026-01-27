@@ -57,7 +57,40 @@ We use a technology called **Satori**.
 
 ---
 
-## 4. Operational Metrics (For You)
+## 5. Pricing & Value Strategy
+
+You asked: *"Images to be processed has its price right? just like the vids?"* and *"Are we selling posting only?"*
+
+### A. The "Exchange Rate" (Credit Costs)
+We charge based on **Computational Intensity** and **Market Value**.
+
+| Asset Type | Cost | Why? |
+| :--- | :--- | :--- |
+| **Branded Image** | **1 Credit** | Fast to generate (Satori). Standard daily content. |
+| **Branded Video** | **5 Credits** | Expensive to render (FFmpeg). High engagement/viral potential. |
+| **Distribution** | **FREE** | Posting text/links costs us nothing. We don't meter this. |
+
+### B. The Three Layers of Value
+We are **NOT** just selling "Posting". Posting is a commodity (Postiz/Buffer do this for $10). We sell **three layers**:
+
+1.  **Bottom Layer: Distribution (The Commodity)**
+    *   *What:* Sending the file to Instagram.
+    *   *Value:* Low. Everyone does this.
+    *   *Our Stance:* We give this away for free to keep them hooked.
+
+2.  **Middle Layer: Transformation (The Creative Engine)**
+    *   *What:* Turning a raw, ugly photo into a **Branded Asset** with logos, price tags, and legal disclaimers.
+    *   *Value:* **High.** This replaces a graphic designer (Salary: KES 40k/mo).
+    *   *Our Price:* 1 Credit (KES 10). **Massive ROI for client.**
+
+3.  **Top Layer: Workflow (The Sticky Factor)**
+    *   *What:* The "Closed Cycle". They update their CRM, we auto-fetch data, generate graphics, and post.
+    *   *Value:* **Priceless.** It buys them *Time* and *Peace of Mind*.
+    *   *Result:* Once they set this up, they **never leave**.
+
+---
+
+## 6. Operational Metrics (For You)
 
 To manage this "Factory," you watch these metrics:
 1.  **Credit Burn Rate:** How fast is a client using their credits? (High burn = High value client).
