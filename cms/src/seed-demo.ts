@@ -61,6 +61,7 @@ async function seed() {
       data: {
         name: 'Getin Sports',
         slug: 'getin-sports',
+        subdomain: 'getinsports',
         branding: {
           primaryColor: '#00ff00', // Sports Green
         },

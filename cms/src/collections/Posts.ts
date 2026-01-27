@@ -54,6 +54,39 @@ export const Posts: CollectionConfig = {
       async ({ doc, operation, req, previousDoc }) => {
         // 1. Creative Engine Trigger (New Raw Media)
         if (doc.assets?.rawMedia && !doc.assets?.brandedMedia) {
+          const tenantId = typeof doc.tenant === 'object' ? doc.tenant.id : doc.tenant
+          
+          // A. Fetch Tenant to check Credits
+          const tenant = await req.payload.findByID({
+            collection: 'tenants',
+            id: tenantId,
+          })
+
+          const credits = tenant.billing?.credits || 0
+
+          if (credits <= 0) {
+             console.warn(`[CreativeEngine] Skipped generation for Tenant ${tenant.name}: Insufficient Credits (${credits}).`)
+             // Optional: You could update the post to flag this error, but for now we just skip.
+             return
+          }
+
+          // B. Deduct Credit (Optimistic)
+          // We deduct BEFORE queuing to prevent abuse. 
+          // If generation fails later, we can refund (future improvement).
+          await req.payload.update({
+             collection: 'tenants',
+             id: tenantId,
+             data: {
+                billing: {
+                    ...tenant.billing,
+                    credits: credits - 1,
+                }
+             },
+             req, // Pass request context to maintain auth/transaction
+          })
+          console.log(`[CreativeEngine] Deducted 1 credit from ${tenant.name}. New Balance: ${credits - 1}`)
+
+          // C. Proceed with Generation
           const rawMediaId = typeof doc.assets.rawMedia === 'object' ? doc.assets.rawMedia.id : doc.assets.rawMedia
           const rawMedia = await req.payload.findByID({
             collection: 'media',

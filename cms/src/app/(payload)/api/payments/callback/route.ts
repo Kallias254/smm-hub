@@ -53,21 +53,31 @@ export const POST = async (req: Request) => {
       },
     })
 
-    // 4. If Successful, Update Tenant Subscription
+    // 4. If Successful, Update Tenant Credits
     if (status === 'completed') {
-       // Check if payment.tenant is just an ID or object
        const tenantId = typeof payment.tenant === 'object' ? payment.tenant.id : payment.tenant
        
+       // Fetch current tenant to get existing credits
+       const tenant = await payload.findByID({
+         collection: 'tenants',
+         id: tenantId,
+       })
+
+       const currentCredits = tenant.billing?.credits || 0
+       const purchasedCredits = Math.floor(payment.amount / 10) // 500 KES = 50 Credits
+
        await payload.update({
          collection: 'tenants',
          id: tenantId,
          data: {
            billing: {
+             ...tenant.billing,
+             credits: currentCredits + purchasedCredits,
              subscriptionStatus: 'active',
            }
          }
        })
-       console.log(`✅ Tenant ${tenantId} subscription activated!`)
+       console.log(`✅ Tenant ${tenantId} Top Up Success! Added ${purchasedCredits} credits. New Balance: ${currentCredits + purchasedCredits}`)
     }
 
     return NextResponse.json({ received: true })
