@@ -73,3 +73,52 @@ For 360° Tours, we do **not** need a separate heavy collection.
 *   We use the standard `Media` collection.
 *   Add a custom field `isPanorama` (checkbox).
 *   Frontend (React View) detects `isPanorama=true` and renders the `Pannellum` viewer instead of a standard `<img>` tag.
+
+## 5. Security Audit & RLS Implementation Requirements
+
+**Status:** ⚠️ CRITICAL VULNERABILITY DETECTED (2026-01-27)
+
+### The Vulnerability
+During a security audit, it was discovered that several core collections were configured with `read: () => true`. This means **unauthenticated users (public)** or users from **competing agencies** could query the API and download sensitive assets, campaign data, and content strategies.
+
+### The Fix: "Smart Key" Logic
+We must replace the open access with Row-Level Security (RLS) filters on all collections.
+
+**The Golden Rule:**
+1.  **Public:** NO Access (Return `false`).
+2.  **Super Admin:** FULL Access (Return `true`).
+3.  **Tenant User:** SCAMP Access (Return `{ tenant: { equals: user.tenant.id } }`).
+
+### Implementation Checklist
+| Collection | Status | Required Action |
+| :--- | :--- | :--- |
+| **Users** | ✅ Secure | Already implements RLS. |
+| **Tenants** | ✅ Secure | Restricted to Admin & Owner (Self-Edit). |
+| **Media** | ✅ Secure | Fixed on 2026-01-27. |
+| **Posts** | ✅ Secure | RLS Filter Applied (2026-01-27). |
+| **Campaigns** | ✅ Secure | RLS Filter Applied (2026-01-27). |
+| **ContentGroups** | ✅ Secure | RLS Filter Applied (2026-01-27). |
+| **Payments** | ✅ Secure | RLS Filter Applied (Strict) (2026-01-27). |
+
+### Code Standard for Fix
+All `access.read`, `access.update`, and `access.delete` properties must follow this pattern:
+
+```typescript
+access: {
+  read: ({ req: { user } }) => {
+    if (!user) return false // 1. Block Public
+    if (user.role === 'admin') return true // 2. Allow Super Admin
+    
+    // 3. Filter by Tenant
+    if (user.tenant) {
+      const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+      return {
+        tenant: {
+          equals: tenantId,
+        },
+      }
+    }
+    return false
+  }
+}
+```

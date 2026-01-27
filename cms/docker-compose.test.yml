@@ -1,0 +1,98 @@
+services:
+  # --- THE APP ---
+  postiz-debug:
+    image: ghcr.io/gitroomhq/postiz-app:latest
+    container_name: postiz-debug
+    ports:
+      - "5005:5000" # Frontend on 5005
+      - "3005:3000" # Backend on 3005
+    environment:
+      MAIN_URL: 'http://localhost:5005'
+      FRONTEND_URL: 'http://localhost:5005'
+      NEXT_PUBLIC_BACKEND_URL: '/api'
+      JWT_SECRET: 'debug-secret-123'
+      DATABASE_URL: 'postgresql://debug:debug@postiz-db-debug:5432/debug'
+      REDIS_URL: 'redis://postiz-redis-debug:6379'
+      BACKEND_INTERNAL_URL: 'http://localhost:3000'
+      TEMPORAL_ADDRESS: "temporal-debug:7233"
+      IS_GENERAL: 'true'
+      DISABLE_REGISTRATION: 'false'
+      RUN_CRON: 'true'
+      STORAGE_PROVIDER: 'local'
+      UPLOAD_DIRECTORY: '/uploads'
+    depends_on:
+      postiz-db-debug:
+        condition: service_healthy
+      postiz-redis-debug:
+        condition: service_healthy
+      temporal-debug:
+        condition: service_started
+    networks:
+      - debug-net
+
+  # --- DATA ---
+  postiz-db-debug:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: debug
+      POSTGRES_USER: debug
+      POSTGRES_DB: debug
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U debug"]
+      interval: 5s
+    networks:
+      - debug-net
+
+  postiz-redis-debug:
+    image: redis:7.2
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+    networks:
+      - debug-net
+
+  # --- TEMPORAL ---
+  temporal-debug:
+    image: temporalio/auto-setup:1.28.1
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-db-debug
+      - ENABLE_ES=true
+      - ES_SEEDS=temporal-es-debug
+    depends_on:
+      temporal-db-debug:
+        condition: service_healthy
+      temporal-es-debug:
+        condition: service_healthy
+    networks:
+      - debug-net
+
+  temporal-db-debug:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_USER: temporal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+    networks:
+      - debug-net
+
+  temporal-es-debug:
+    image: elasticsearch:7.17.27
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - xpack.security.enabled=false
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -E 'green|yellow'"]
+      interval: 10s
+    networks:
+      - debug-net
+
+networks:
+  debug-net:
+    driver: bridge

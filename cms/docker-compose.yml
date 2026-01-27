@@ -54,7 +54,7 @@ services:
 
   # --- OFFICIAL POSTIZ STACK ---
   postiz:
-    image: ghcr.io/gitroomhq/postiz-app:latest
+    image: ghcr.io/gitroomhq/postiz-app:v2.12.1
     container_name: postiz
     restart: always
     environment:
@@ -66,7 +66,7 @@ services:
       JWT_SECRET: 'official-secret-key-gitroom-1234567890'
       DATABASE_URL: 'postgresql://postiz-user:postiz-password@postiz-postgres:5432/postiz-db-local'
       REDIS_URL: 'redis://postiz-redis:6379'
-      BACKEND_INTERNAL_URL: 'http://localhost:5000'
+      BACKEND_INTERNAL_URL: 'http://localhost:3000'
       TEMPORAL_ADDRESS: "temporal:7233"
       IS_GENERAL: 'true'
       DISABLE_REGISTRATION: 'false'

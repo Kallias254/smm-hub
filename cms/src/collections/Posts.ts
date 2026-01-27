@@ -8,7 +8,46 @@ export const Posts: CollectionConfig = {
     group: 'Marketing',
   },
   access: {
-    read: () => true,
+    create: ({ req: { user } }) => !!user,
+    read: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      if (user.tenant) {
+        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+        return {
+          tenant: {
+            equals: tenantId,
+          },
+        }
+      }
+      return false
+    },
+    update: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      if (user.tenant) {
+        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+        return {
+          tenant: {
+            equals: tenantId,
+          },
+        }
+      }
+      return false
+    },
+    delete: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      if (user.tenant) {
+        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+        return {
+          tenant: {
+            equals: tenantId,
+          },
+        }
+      }
+      return false
+    },
   },
   hooks: {
     afterChange: [

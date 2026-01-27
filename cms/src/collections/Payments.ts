@@ -8,9 +8,46 @@ export const Payments: CollectionConfig = {
     defaultColumns: ['transactionId', 'status', 'amount', 'tenant', 'createdAt'],
   },
   access: {
-    read: () => true,
-    create: () => true, // We'll secure this with hooks/logic later
-    update: () => false, // Payments should be immutable mostly
+    create: ({ req: { user } }) => !!user,
+    read: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      if (user.tenant) {
+        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+        return {
+          tenant: {
+            equals: tenantId,
+          },
+        }
+      }
+      return false
+    },
+    update: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      if (user.tenant) {
+        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+        return {
+          tenant: {
+            equals: tenantId,
+          },
+        }
+      }
+      return false
+    },
+    delete: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      if (user.tenant) {
+        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+        return {
+          tenant: {
+            equals: tenantId,
+          },
+        }
+      }
+      return false
+    },
   },
   fields: [
     {

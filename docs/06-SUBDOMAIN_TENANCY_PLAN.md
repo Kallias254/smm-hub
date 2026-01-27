@@ -71,6 +71,6 @@ cd cms && npx tsx src/create-tenant-auto.ts
 ---
 
 ## 5. Next Steps (Level 3)
-- [ ] **Row-Level Security**: Implement access control hooks in SMM Hub that utilize the `X-Tenant-Subdomain` header to auto-filter all collection queries.
+- [x] **Row-Level Security**: Implement access control hooks in SMM Hub that utilize the `X-Tenant-Subdomain` header to auto-filter all collection queries.
 - [ ] **Custom Domain Support**: Add support for agency-owned domains (e.g., `social.nebula.com`).
 - [ ] **Global Dashboard**: Build a system-wide analytics view for Superadmins using the Master Postiz Key.

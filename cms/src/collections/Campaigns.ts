@@ -7,7 +7,46 @@ export const Campaigns: CollectionConfig = {
     group: 'Marketing',
   },
   access: {
-    read: () => true, // TODO: Restrict by Tenant
+    create: ({ req: { user } }) => !!user,
+    update: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === "admin") return true
+      if (user.tenant) {
+        const tenantId = typeof user.tenant === "object" ? user.tenant.id : user.tenant
+        return {
+          tenant: {
+            equals: tenantId,
+          },
+        }
+      }
+      return false
+    },
+    delete: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === "admin") return true
+      if (user.tenant) {
+        const tenantId = typeof user.tenant === "object" ? user.tenant.id : user.tenant
+        return {
+          tenant: {
+            equals: tenantId,
+          },
+        }
+      }
+      return false
+    },
+    read: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === "admin") return true
+      if (user.tenant) {
+        const tenantId = typeof user.tenant === "object" ? user.tenant.id : user.tenant
+        return {
+          tenant: {
+            equals: tenantId,
+          },
+        }
+      }
+      return false
+    },
   },
   fields: [
     {

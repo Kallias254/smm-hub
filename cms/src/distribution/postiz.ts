@@ -86,21 +86,50 @@ export class PostizClient {
       // 2. Link User to Organization (if ownerEmail provided)
       if (ownerEmail) {
         // Find the user in Postiz by email
-        const userRes = await client.query('SELECT id FROM "User" WHERE email = $1', [ownerEmail])
+        let userRes = await client.query('SELECT id FROM "User" WHERE email = $1', [ownerEmail])
         
-        if (userRes.rows.length > 0) {
-          const userId = userRes.rows[0].id
-          const userOrgId = crypto.randomUUID()
+        let userId;
+
+        if (userRes.rows.length === 0) {
+             console.log(`[Postiz] User ${ownerEmail} not found. Creating new user...`)
+             userId = crypto.randomUUID()
+             // Hash for 'password123' (Generated via docker exec inside Postiz)
+             const passwordHash = '$2b$10$Gkg6GRRryQQ7XBepnPeMpuzjVCZl0PqD8wWQZbBulbxL1Tb/YJw8S' 
+             
+             await client.query(
+                `INSERT INTO "User" (id, email, password, "providerName", "isSuperAdmin", "audience", "timezone", "createdAt", "updatedAt", "lastReadNotifications", "activated", "connectedAccount", "lastOnline", "sendSuccessEmails", "sendFailureEmails")
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+                 [
+                     userId, 
+                     ownerEmail, 
+                     passwordHash, 
+                     'LOCAL', 
+                     false, 
+                     0, 
+                     0, 
+                     now, 
+                     now, 
+                     now, 
+                     true, 
+                     false, 
+                     now, 
+                     true, 
+                     true
+                 ]
+             )
+             console.log(`[Postiz] Created new user ${ownerEmail} with password 'password123'`)
+        } else {
+            userId = userRes.rows[0].id
+        }
+
+        const userOrgId = crypto.randomUUID()
           
-          await client.query(
+        await client.query(
             `INSERT INTO "UserOrganization" (id, "userId", "organizationId", role, "createdAt", "updatedAt", disabled) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [userOrgId, userId, orgId, 'ADMIN', now, now, false]
-          )
-          console.log(`[Postiz] Linked user ${ownerEmail} to new Organization as ADMIN.`)
-        } else {
-          console.warn(`[Postiz] Owner user ${ownerEmail} not found in Postiz database. Skipping link.`)
-        }
+        )
+        console.log(`[Postiz] Linked user ${ownerEmail} to new Organization as ADMIN.`)
       }
 
       console.log(`[Postiz] Successfully provisioned Organization ${orgId}.`)
