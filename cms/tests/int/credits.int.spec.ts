@@ -14,12 +14,13 @@ describe('Credit System & Billing', () => {
     payload = await getPayload({ config: payloadConfig })
 
     // 1. Create a Test Tenant with known credits
+    const uniqueId = Date.now()
     const tenant = await payload.create({
       collection: 'tenants',
       data: {
-        name: 'Test Auto Agency',
-        slug: 'test-auto-agency',
-        subdomain: 'testauto', // Required field
+        name: `Test Auto Agency ${uniqueId}`,
+        slug: `test-auto-agency-${uniqueId}`,
+        subdomain: `testauto${uniqueId}`, // Required field
         billing: {
           credits: 10, // Start with 10
         },
@@ -30,23 +31,61 @@ describe('Credit System & Billing', () => {
     })
     tenantId = typeof tenant.id === 'object' ? tenant.id : tenant.id
 
-    // 2. Create a Dummy Media File for testing uploads
-    // We'll create a simple buffer to simulate an image
-    const imageBuffer = Buffer.from('fake-image-data')
-    const media = await payload.create({
-      collection: 'media',
-      data: {
-        alt: 'Test Image',
-        tenant: tenantId,
-      },
-      file: {
-        data: imageBuffer,
-        name: 'test-image.jpg',
-        mimetype: 'image/jpeg',
-        size: imageBuffer.length,
-      },
-    })
-    mediaId = media.id
+            // 2. Create a Dummy Media File
+
+            // We utilize a valid Base64 PNG (1x1 pixel) to ensure 'image-size' and file-type validation pass
+
+            const tempFilePath = path.resolve(__dirname, 'temp-test-image.png')
+
+            const base64Image = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=='
+
+            fs.writeFileSync(tempFilePath, Buffer.from(base64Image, 'base64'))
+
+            
+
+            const fileBuffer = fs.readFileSync(tempFilePath)
+
+            
+
+            const media = await payload.create({
+
+              collection: 'media',
+
+              data: {
+
+                alt: 'Test Image',
+
+                tenant: tenantId,
+
+              },
+
+              file: {
+
+                data: new Uint8Array(fileBuffer),
+
+                name: 'test-image.png',
+
+                mimetype: 'image/png',
+
+                size: fileBuffer.length,
+
+              },
+
+            })
+
+        
+
+        // Cleanup temp file
+
+        if (fs.existsSync(tempFilePath)) {
+
+            fs.unlinkSync(tempFilePath)
+
+        }
+
+        
+
+        mediaId = media.id
   })
 
   it('should deduct 1 credit when a Post is created with rawMedia', async () => {
