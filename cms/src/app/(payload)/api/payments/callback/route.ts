@@ -42,47 +42,25 @@ export const POST = async (req: Request) => {
       }
     }
 
-    // 3. Update Payment Record
+    // 4. Update Payment Status (The Collection Hook will handle Credit addition)
     await payload.update({
-      collection: 'payments',
-      id: payment.id,
-      data: {
-        status,
-        transactionId: transactionId || undefined,
-        rawCallback: data,
-      },
+        collection: 'payments',
+        id: payment.id,
+        data: {
+            status: status,
+            transactionId: mpesaReceiptNumber,
+            rawCallback: callbackData,
+        }
     })
 
-    // 4. If Successful, Update Tenant Credits
     if (status === 'completed') {
-       const tenantId = typeof payment.tenant === 'object' ? payment.tenant.id : payment.tenant
-       
-       // Fetch current tenant to get existing credits
-       const tenant = await payload.findByID({
-         collection: 'tenants',
-         id: tenantId,
-       })
-
-       const currentCredits = tenant.billing?.credits || 0
-       const purchasedCredits = Math.floor(payment.amount / 10) // 500 KES = 50 Credits
-
-       await payload.update({
-         collection: 'tenants',
-         id: tenantId,
-         data: {
-           billing: {
-             ...tenant.billing,
-             credits: currentCredits + purchasedCredits,
-             subscriptionStatus: 'active',
-           }
-         }
-       })
-       console.log(`✅ Tenant ${tenantId} Top Up Success! Added ${purchasedCredits} credits. New Balance: ${currentCredits + purchasedCredits}`)
+        console.log(`✅ Payment verified: ${mpesaReceiptNumber}`)
+    } else {
+        console.log(`❌ Payment failed or cancelled.`)
     }
 
     return NextResponse.json({ received: true })
-
-  } catch (error: any) {
+  } catch (error) {
     console.error('Callback Error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
