@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:io';
 import 'dart:convert';
 import '../config.dart';
+import '../services/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _posts = [];
   bool _isLoading = true;
+  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
@@ -28,8 +31,24 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final url = Uri.parse('${Config.apiBaseUrl}/posts?where[distributionStatus][in]=queued,pending&limit=10&sort=-createdAt');
-      final response = await http.get(url);
+      final token = await _storage.read(key: 'jwt_token');
+      final agencySlug = await _storage.read(key: 'agency_slug');
+
+      if (token == null || agencySlug == null) {
+        // Redirect to login if needed, for now just show error
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final url = Uri.parse('${Config.apiBaseUrl}/posts?where[distributionStatus][in]=pending,queued&limit=20&sort=-createdAt');
+      
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'JWT $token',
+          'X-Tenant-Subdomain': agencySlug,
+        },
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -40,163 +59,133 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
       } else {
-        throw Exception('Server returned ${response.statusCode}');
+        throw Exception('Server error: ${response.statusCode}');
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Connection Error: Make sure CMS is running at ${Config.apiBaseUrl}')),
+          SnackBar(content: Text('Error fetching tasks: $e')),
         );
       }
     }
   }
 
+  /// Flow 1: Share to WhatsApp (Manual Approval)
   Future<void> _handleShare(Map<String, dynamic> post) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
     try {
-      // 1. Get Image URL
       String? imageUrl;
-      if (post['assets'] != null && post['assets']['brandedMedia'] != null) {
+      if (post['assets']?['brandedMedia'] != null) {
         imageUrl = post['assets']['brandedMedia']['url'];
       }
       
       if (imageUrl == null) {
-        scaffoldMessenger.showSnackBar(const SnackBar(content: Text('No branded image found to share!')));
+        scaffoldMessenger.showSnackBar(const SnackBar(content: Text('No media generated yet!')));
         return;
       }
 
-      // Fix localhost for emulator
+      // Handle localhost to emulator mapping
       if (imageUrl.startsWith('http://localhost:3000')) {
         imageUrl = imageUrl.replaceFirst('http://localhost:3000', 'http://10.0.2.2:3000');
       }
 
-      scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Preparing media...'), duration: Duration(seconds: 1)));
-
-      // 2. Download Image
       final response = await http.get(Uri.parse(imageUrl));
-      final bytes = response.bodyBytes;
-
-      // 3. Save to Temp Dir
       final temp = await getTemporaryDirectory();
-      final path = '${temp.path}/share_image.png';
-      File(path).writeAsBytesSync(bytes);
+      final path = '${temp.path}/branded_${post['id']}.png';
+      File(path).writeAsBytesSync(response.bodyBytes);
 
-      // 4. Extract Caption (Simple text fallback)
       final title = post['title'] ?? 'New Property';
-      final captionText = "${post['caption']?['root']?['children']?[0]?['children']?[0]?['text'] ?? 'Check this out!'}";
-
-      // 5. Trigger System Share
+      
       await Share.shareXFiles(
         [XFile(path)],
-        text: "$title\n\n$captionText",
+        text: "Hi! Check out this post for approval:\n\n$title",
       );
-
-      // 6. Ask user if they want to mark as published
-      _showPublishedDialog(post['id']);
 
     } catch (e) {
       scaffoldMessenger.showSnackBar(SnackBar(content: Text('Share failed: $e')));
     }
   }
 
-  void _showPublishedDialog(String postId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Post Successful?'),
-        content: const Text('Did you successfully share this to the social channels?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('No'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              _markAsPublished(postId);
-              Navigator.pop(context);
-            },
-            child: const Text('Yes, Mark Published'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _markAsPublished(String postId) async {
+  /// Flow 2: Official Approval (Triggers Postiz)
+  Future<void> _publishToSocials(String postId) async {
+    setState(() => _isLoading = true);
     try {
+      final token = await _storage.read(key: 'jwt_token');
+      final agencySlug = await _storage.read(key: 'agency_slug');
+
       await http.patch(
         Uri.parse('${Config.apiBaseUrl}/posts/$postId'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'distributionStatus': 'published'}),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'JWT $token',
+          'X-Tenant-Subdomain': agencySlug ?? '',
+        },
+        body: json.encode({'distributionStatus': 'queued'}),
       );
-      _fetchPosts(); // Refresh list
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sent to Distribution Queue!'), backgroundColor: Colors.green),
+      );
+      _fetchPosts(); 
     } catch (e) {
-      print('Failed to update status: $e');
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Publish failed: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _fetchPosts,
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar.large(
-              title: const Text('Marketing Tasks'),
-              floating: true,
-              pinned: true,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.account_circle_outlined),
-                  onPressed: () {},
+      appBar: AppBar(
+        title: const Text('Agent Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchPosts,
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await AuthService().logout();
+              if (mounted) Navigator.of(context).pushReplacementNamed('/login');
+            },
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _posts.isEmpty
+              ? _buildEmptyState()
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _posts.length,
+                  itemBuilder: (context, index) => _buildTaskCard(_posts[index]),
                 ),
-              ],
-            ),
-            if (_isLoading)
-              const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_posts.isEmpty)
-              const SliverFillRemaining(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.done_all, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text('All caught up!', style: TextStyle(fontSize: 18, color: Colors.grey)),
-                    ],
-                  ),
-                ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final post = _posts[index];
-                      return _buildTaskCard(post);
-                    },
-                    childCount: _posts.length,
-                  ),
-                ),
-              ),
-          ],
-        ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.check_circle_outline, size: 100, color: Colors.green.shade100),
+          const SizedBox(height: 24),
+          const Text('No Pending Tasks', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const Text('Your social media is currently up to date.', style: TextStyle(color: Colors.grey)),
+        ],
       ),
     );
   }
 
   Widget _buildTaskCard(Map<String, dynamic> post) {
+    final isReady = post['assets']?['brandedMedia'] != null;
     final status = post['distributionStatus'];
-    final isQueued = status == 'queued';
     
     String? imageUrl;
-    if (post['assets']?['brandedMedia'] != null) {
+    if (isReady) {
       imageUrl = post['assets']['brandedMedia']['url'];
       if (imageUrl != null && imageUrl.startsWith('http://localhost:3000')) {
         imageUrl = imageUrl.replaceFirst('http://localhost:3000', 'http://10.0.2.2:3000');
@@ -204,73 +193,66 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: Colors.grey.withOpacity(0.2)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.only(bottom: 20),
+      elevation: 4,
+      margin: const EdgeInsets.only(bottom: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Stack(
-            children: [
-              if (imageUrl != null)
-                Image.network(
-                  imageUrl,
-                  height: 240,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                )
-              else
-                Container(
-                  height: 120,
-                  color: Colors.blueGrey[50],
-                  child: const Center(child: Icon(Icons.image_outlined, size: 48, color: Colors.grey)),
-                ),
-              Positioned(
-                top: 16,
-                right: 16,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isQueued ? Colors.blue : Colors.orange,
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Text(
-                    isQueued ? 'READY TO POST' : 'PENDING GEN',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
-                  ),
-                ),
+          if (imageUrl != null)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Image.network(imageUrl, height: 200, fit: BoxFit.cover),
+            )
+          else
+            Container(
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               ),
-            ],
-          ),
+              child: const Center(child: Text('Generating Branded Content...')),
+            ),
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  post['title'] ?? 'Untitled',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        post['title'] ?? 'New Listing',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    _buildStatusBadge(status),
+                  ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Destination: ${(post['channels'] as List?)?.join(' • ') ?? 'None'}',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                ),
-                const SizedBox(height: 20),
+                Text('Channels: ${(post['channels'] as List?)?.join(', ') ?? 'All'}'),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
-                      child: FilledButton.tonalIcon(
-                        onPressed: isQueued ? () => _handleShare(post) : null,
-                        icon: const Icon(Icons.ios_share, size: 18),
-                        label: const Text('Open Share Sheet'),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: OutlinedButton.icon(
+                        onPressed: isReady ? () => _handleShare(post) : null,
+                        icon: const Icon(Icons.whatsapp),
+                        label: const Text('WhatsApp Client'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: isReady && status == 'pending' 
+                           ? () => _publishToSocials(post['id']) 
+                           : null,
+                        icon: const Icon(Icons.rocket_launch),
+                        label: const Text('Publish'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          foregroundColor: Colors.white,
                         ),
                       ),
                     ),
@@ -281,6 +263,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color = Colors.orange;
+    String label = 'Pending';
+    if (status == 'queued') { color = Colors.blue; label = 'Queued'; }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
     );
   }
 }

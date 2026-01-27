@@ -10,6 +10,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _agencyController = TextEditingController(); // New Controller
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
@@ -21,18 +22,20 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
+    final agency = _agencyController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
+    if (agency.isEmpty || email.isEmpty || password.isEmpty) {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Please enter both email and password';
+        _errorMessage = 'Please enter Agency ID, Email, and Password';
       });
       return;
     }
 
-    final success = await AuthService().login(email, password);
+    // Pass agency slug to auth service
+    final success = await AuthService().login(agency, email, password);
 
     if (!mounted) return;
 
@@ -47,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } else {
       setState(() {
-        _errorMessage = 'Invalid credentials. Please try again.';
+        _errorMessage = 'Invalid credentials or Agency ID.';
       });
     }
   }
@@ -107,6 +110,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
               ],
+
+              // Agency ID Field (New)
+              TextField(
+                controller: _agencyController,
+                decoration: const InputDecoration(
+                  labelText: 'Agency ID (e.g. gamma)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.business),
+                ),
+              ),
+              const SizedBox(height: 16),
 
               // Email
               TextField(

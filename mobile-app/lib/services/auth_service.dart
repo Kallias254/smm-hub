@@ -32,13 +32,20 @@ class AuthService {
   }
 
   /// Login to Payload CMS
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String agencySlug, String email, String password) async {
     try {
+      // 10.0.2.2 points to localhost of the host machine (Android Emulator)
       final url = Uri.parse('${Config.apiBaseUrl}/users/login');
       
+      print('Attempting login to: $url with agency: $agencySlug');
+
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          // CRITICAL: This header tells the backend which Tenant DB to use
+          'X-Tenant-Subdomain': agencySlug, 
+        },
         body: json.encode({
           'email': email,
           'password': password,
@@ -55,10 +62,12 @@ class AuthService {
         if (_token != null) {
           await _storage.write(key: 'jwt_token', value: _token);
           await _storage.write(key: 'user_data', value: json.encode(_currentUser));
+          // Save the agency slug so we can use it for future requests
+          await _storage.write(key: 'agency_slug', value: agencySlug); 
           return true;
         }
       } else {
-        print('Login failed: ${response.body}');
+        print('Login failed [${response.statusCode}]: ${response.body}');
       }
     } catch (e) {
       print('Login Error: $e');
