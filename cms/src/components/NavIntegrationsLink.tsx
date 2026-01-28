@@ -7,10 +7,13 @@ import { useAuth } from '@payloadcms/ui'
 const NavIntegrationsLink: React.FC = () => {
   const { user } = useAuth()
 
-  // Only show the Integrations link if the user is assigned to a tenant
-  // or if they are a superadmin who explicitly wants to see global integrations.
-  // For now, we hide it for global admins without a tenant to clean up the UI.
-  if (!user || !(user as any).tenants || (user as any).tenants.length === 0) {
+  if (!user) return null
+
+  // Admin sees everything. Tenants see only if assigned.
+  const isAdmin = user.role === 'admin'
+  const hasTenants = (user as any).tenants && (user as any).tenants.length > 0
+
+  if (!isAdmin && !hasTenants) {
     return null
   }
 
