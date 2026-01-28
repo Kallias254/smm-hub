@@ -43,7 +43,11 @@ async function createTenant() {
     let slug = await question(`Enter Slug (default: ${defaultSlug}): `)
     if (!slug) slug = defaultSlug
 
-    // 3. Generate Ingestion Key
+    // 3. Get Subdomain
+    let subdomain = await question(`Enter Subdomain (default: ${slug}): `)
+    if (!subdomain) subdomain = slug
+
+    // 4. Generate Ingestion Key
     const ingestionKey = crypto.randomBytes(16).toString('hex')
     console.log(`\n🔑 Generated Ingestion Key: ${ingestionKey}`)
 
@@ -54,6 +58,7 @@ async function createTenant() {
       data: {
         name,
         slug,
+        subdomain,
         branding: {
           primaryColor: '#000000', // Default to black
         },
@@ -66,13 +71,13 @@ async function createTenant() {
             ingestionKey: ingestionKey
         }
       },
-    })
+    } as any)
 
     console.log('\n✅ Tenant Created Successfully!')
     console.log('------------------------------------------------')
-    console.log(`Agency:         ${tenant.name}`)
+    console.log(`Agency:         ${(tenant as any).name}`)
     console.log(`ID:             ${tenant.id}`)
-    console.log(`Slug:           ${tenant.slug}`)
+    console.log(`Slug:           ${(tenant as any).slug}`)
     console.log(`Postiz Key:     (Provisioning in progress via hook...)`)
     console.log(`Ingestion Key:  ${(tenant as any).integrations?.ingestionKey}`)
     console.log('------------------------------------------------')

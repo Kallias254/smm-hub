@@ -3,10 +3,10 @@ import path from 'path'
 import fs from 'fs'
 
 // Lazy initialization of Firebase Admin
-let firebaseInitialized = false
+let firebaseAdminInstance: any = null
 
 async function initFirebase() {
-  if (firebaseInitialized) return true
+  if (firebaseAdminInstance) return firebaseAdminInstance
 
   try {
     // Dynamically import firebase-admin only on the server
@@ -20,7 +20,7 @@ async function initFirebase() {
           credential: admin.credential.cert(serviceAccount)
         })
       }
-      firebaseInitialized = true
+      firebaseAdminInstance = admin
       console.log('✅ Firebase Admin initialized via Environment Variable')
       return admin
     }
@@ -34,7 +34,7 @@ async function initFirebase() {
           credential: admin.credential.cert(serviceAccount)
         })
       }
-      firebaseInitialized = true
+      firebaseAdminInstance = admin
       console.log('✅ Firebase Admin initialized via Local File')
       return admin
     }

@@ -6,7 +6,45 @@ export const Media: CollectionConfig = {
     group: 'Creative Assets',
   },
   access: {
-    read: () => true,
+    update: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      if (user.tenants && user.tenants.length > 0) {
+        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
+        return {
+          tenant: {
+            in: tenantIds,
+          },
+        }
+      }
+      return false
+    },
+    delete: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      if (user.tenants && user.tenants.length > 0) {
+        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
+        return {
+          tenant: {
+            in: tenantIds,
+          },
+        }
+      }
+      return false
+    },
+    read: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      if (user.tenants && user.tenants.length > 0) {
+        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
+        return {
+          tenant: {
+            in: tenantIds,
+          },
+        }
+      }
+      return false
+    },
   },
   upload: {
     staticDir: 'media',

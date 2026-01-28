@@ -1,5 +1,5 @@
 import { CollectionAfterChangeHook } from 'payload'
-import { postiz } from '../../../distribution/postiz'
+import { postiz } from '../../../distribution/postiz.ts'
 
 /**
  * AUTOMATED ONBOARDING HOOK
@@ -25,7 +25,8 @@ export const createPostizWorkspace: CollectionAfterChangeHook = async ({
     console.log(`[TenantHook] Triggering Postiz Provisioning for: ${doc.name}`)
 
     // 1. Call the Postiz Provisioning Logic
-    const { apiKey } = await postiz.createWorkspace(doc.name, doc.subdomain, req.user?.email)
+    const ownerEmails = req.user?.email ? [req.user.email] : []
+    const { apiKey } = await postiz.createWorkspace(doc.name, doc.subdomain, ownerEmails)
 
     // 2. Update the Tenant with the new Key
     // We use the local API to update without triggering hooks again if possible,

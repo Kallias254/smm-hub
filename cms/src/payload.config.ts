@@ -11,14 +11,14 @@ const dirname = path.dirname(filename)
 
 dotenv.config({ path: path.resolve(dirname, '../.env') })
 
-import { Users } from './collections/Users'
-import { Media } from './collections/Media'
-import { Tenants } from './collections/Tenants'
-import { Campaigns } from './collections/Campaigns'
-import { Posts } from './collections/Posts'
-import { ContentGroups } from './collections/ContentGroups'
-import { Payments } from './collections/Payments'
-import { tasks } from './tasks'
+import { Users } from './collections/Users.ts'
+import { Media } from './collections/Media.ts'
+import { Tenants } from './collections/Tenants.ts'
+import { Campaigns } from './collections/Campaigns.ts'
+import { Posts } from './collections/Posts.ts'
+import { ContentGroups } from './collections/ContentGroups.ts'
+import { Payments } from './collections/Payments.ts'
+import { tasks } from './tasks/index.ts'
 import { s3Storage } from '@payloadcms/storage-s3'
 
 export default buildConfig({

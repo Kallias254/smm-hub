@@ -7,12 +7,11 @@ import { RealEstateTemplate01 } from './templates/real-estate/RealEstateTemplate
 import { SportsTemplate01 } from './templates/sports/SportsTemplate01'
 import React from 'react'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-// Load Font
-const fontPath = path.resolve(__dirname, '../../public/fonts/Roboto-Bold.ttf')
-const fontData = fs.readFileSync(fontPath)
+// Load Font (Dynamic)
+const getFontData = () => {
+  const fontPath = path.join(process.cwd(), 'public/fonts/Roboto-Bold.ttf')
+  return fs.readFileSync(fontPath)
+}
 
 export async function generateBrandedImage(input: {
   imageUrl: string
@@ -21,6 +20,7 @@ export async function generateBrandedImage(input: {
   data: any // Flexible data from the Block
 }) {
   const { data } = input
+  const fontData = getFontData()
   
   // Select Template based on Block Type (slug)
   let Template: any = RealEstateTemplate01 // Default

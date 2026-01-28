@@ -55,12 +55,13 @@ async function verifyTenancy() {
         }
 
         // 3. Update User with Tenant
-        if (user.tenant !== tenant.id) {
+        const currentTenantIds = (user as any).tenants ? (user as any).tenants.map((t: any) => typeof t === 'object' ? t.id : t) : []
+        if (!currentTenantIds.includes(tenant.id)) {
             console.log(`Assigning User ${email} to Tenant ${name}`)
             user = await payload.update({
                 collection: 'users',
                 id: user.id,
-                data: { tenant: tenant.id }
+                data: { tenants: [tenant.id] }
             })
         }
 
@@ -69,7 +70,7 @@ async function verifyTenancy() {
         let campaign = await payload.find({ 
             collection: 'campaigns', 
             where: { title: { equals: campaignSlug } },
-            req: { user } // Use RLS context
+            req: { user: user as any } // Use RLS context
         }).then(res => res.docs[0])
 
         if (!campaign) {
@@ -82,7 +83,7 @@ async function verifyTenancy() {
                     startDate: new Date().toISOString(),
                     budget: 1000
                 },
-                req: { user }
+                req: { user: user as any }
             })
         }
 
@@ -91,7 +92,7 @@ async function verifyTenancy() {
         let post = await payload.find({
             collection: 'posts',
             where: { title: { equals: postTitle } },
-            req: { user }
+            req: { user: user as any }
         }).then(res => res.docs[0])
 
         if (!post) {
@@ -101,11 +102,11 @@ async function verifyTenancy() {
                 data: {
                     title: postTitle,
                     tenant: tenant.id,
-                    content: [{ blockType: 'sportsFixture', data: { homeTeam: 'A', awayTeam: 'B' } }], // Dummy block
+                    content: [{ blockType: 'sports-fixture', data: { homeTeam: 'A', awayTeam: 'B' } }], // Dummy block
                     channels: ['twitter'],
                     distributionStatus: 'pending'
                 },
-                req: { user }
+                req: { user: user as any }
             })
         }
 
@@ -161,7 +162,7 @@ async function verifyTenancy() {
     const stolenCampaigns = await payload.find({
         collection: 'campaigns',
         where: { tenant: { equals: alpha.tenant.id } }, // Explicitly ask for Alpha's data
-        req: { user: beta.user }, // As Beta user
+        req: { user: beta.user as any }, // As Beta user
         overrideAccess: false
     })
 
@@ -175,7 +176,7 @@ async function verifyTenancy() {
     const stolenPosts = await payload.find({
         collection: 'posts',
         where: { tenant: { equals: alpha.tenant.id } },
-        req: { user: beta.user },
+        req: { user: beta.user as any },
         overrideAccess: false
     })
 
@@ -203,7 +204,7 @@ async function verifyTenancy() {
                 checkoutRequestId: 'req_' + Math.random(),
                 status: 'pending'
             },
-            req: { user: alpha.user }
+            req: { user: alpha.user as any }
         })
     }
     
@@ -211,7 +212,7 @@ async function verifyTenancy() {
     const stolenPaymentsList = await payload.find({
         collection: 'payments',
         where: { id: { equals: alphaPayment.id } },
-        req: { user: beta.user },
+        req: { user: beta.user as any },
         overrideAccess: false
     })
 

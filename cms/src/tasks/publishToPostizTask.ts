@@ -126,7 +126,7 @@ export const publishToPostizTask: TaskConfig<{ input: PublishToPostizInput, outp
 
       // 6. Update Status based on outcomes
       let finalStatus = 'failed'
-          const nextScheduledDate = new Date(nextRun)
+      const nextScheduledDate = new Date(post.scheduledAt || new Date())
       let shouldRecur = false
 
       if (postizSuccess && manualSuccess) {

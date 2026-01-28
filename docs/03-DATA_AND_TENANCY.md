@@ -13,20 +13,25 @@ In Payload v3, we will use **Collections** with `access` control functions.
     *   `brandColor` (Color picker)
     *   `watermarkLogo` (Upload)
     *   `mpesaShortcode` (for billing)
+    *   `seatLimit` (Maximum freelancers allowed)
     *   `subscriptionStatus` (active, past_due)
 
-### The `Users` Collection
-*   **Relation:** Belongs to ONE `Tenant`.
+### The `Users` Collection (GitHub Style)
+*   **Relation:** Belongs to **MANY** `Tenants` (Relationship with `hasMany: true`).
 *   **Role:** `admin` (System God), `tenant_owner` (Agency Boss), `agent` (Worker).
+*   **Membership Sync:** An `afterChange` hook automatically replicates these relationships in the Postiz DB via direct SQL.
 *   **Access Control:**
     ```typescript
-    const filterByTenant = ({ req }) => {
-      if (req.user.role === 'admin') return true;
-      return {
-        'tenant': {
-          equals: req.user.tenant
-        }
-      };
+    const filterByTenant = ({ req: { user } }) => {
+      if (user.role === 'admin') return true;
+      if (user.tenants) {
+        return {
+          'tenant': {
+            in: user.tenants.map(t => typeof t === 'object' ? t.id : t)
+          }
+        };
+      }
+      return false;
     };
     ```
 
@@ -34,7 +39,7 @@ In Payload v3, we will use **Collections** with `access` control functions.
 
 ### `Campaigns`
 *   **Title:** e.g., "Nairobi West Launch"
-*   **Tenant:** Relationship
+*   **Tenant:** Relationship (Scoped via RLS)
 *   **Budget:** Number
 *   **StartDate/EndDate:** Date
 *   **Status:** Draft, Active, Completed
@@ -76,49 +81,23 @@ For 360° Tours, we do **not** need a separate heavy collection.
 
 ## 5. Security Audit & RLS Implementation Requirements
 
-**Status:** ⚠️ CRITICAL VULNERABILITY DETECTED (2026-01-27)
+**Status:** ✅ SECURE (Fixed 2026-01-28)
 
-### The Vulnerability
-During a security audit, it was discovered that several core collections were configured with `read: () => true`. This means **unauthenticated users (public)** or users from **competing agencies** could query the API and download sensitive assets, campaign data, and content strategies.
-
-### The Fix: "Smart Key" Logic
-We must replace the open access with Row-Level Security (RLS) filters on all collections.
+### The "Smart Key" Logic
+All collections implement Row-Level Security (RLS) filters.
 
 **The Golden Rule:**
 1.  **Public:** NO Access (Return `false`).
 2.  **Super Admin:** FULL Access (Return `true`).
-3.  **Tenant User:** SCAMP Access (Return `{ tenant: { equals: user.tenant.id } }`).
+3.  **Tenant User:** SCAMP Access (Return `{ tenant: { in: user.tenants } }`).
 
 ### Implementation Checklist
-| Collection | Status | Required Action |
+| Collection | Status | Mechanism |
 | :--- | :--- | :--- |
-| **Users** | ✅ Secure | Already implements RLS. |
-| **Tenants** | ✅ Secure | Restricted to Admin & Owner (Self-Edit). |
-| **Media** | ✅ Secure | Fixed on 2026-01-27. |
-| **Posts** | ✅ Secure | RLS Filter Applied (2026-01-27). |
-| **Campaigns** | ✅ Secure | RLS Filter Applied (2026-01-27). |
-| **ContentGroups** | ✅ Secure | RLS Filter Applied (2026-01-27). |
-| **Payments** | ✅ Secure | RLS Filter Applied (Strict) (2026-01-27). |
-
-### Code Standard for Fix
-All `access.read`, `access.update`, and `access.delete` properties must follow this pattern:
-
-```typescript
-access: {
-  read: ({ req: { user } }) => {
-    if (!user) return false // 1. Block Public
-    if (user.role === 'admin') return true // 2. Allow Super Admin
-    
-    // 3. Filter by Tenant
-    if (user.tenant) {
-      const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
-      return {
-        tenant: {
-          equals: tenantId,
-        },
-      }
-    }
-    return false
-  }
-}
-```
+| **Users** | ✅ Secure | RLS based on `tenants` array. |
+| **Tenants** | ✅ Secure | Restricted to Admin & Members. |
+| **Media** | ✅ Secure | RLS Filter Applied. |
+| **Posts** | ✅ Secure | RLS Filter Applied. |
+| **Campaigns** | ✅ Secure | RLS Filter Applied. |
+| **ContentGroups** | ✅ Secure | RLS Filter Applied. |
+| **Payments** | ✅ Secure | RLS Filter Applied (Strict). |

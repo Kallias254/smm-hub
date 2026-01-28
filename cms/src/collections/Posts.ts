@@ -9,27 +9,14 @@ export const Posts: CollectionConfig = {
   },
   access: {
     create: ({ req: { user } }) => !!user,
-    read: ({ req: { user } }) => {
-      if (!user) return false
-      if (user.role === 'admin') return true
-      if (user.tenant) {
-        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
-        return {
-          tenant: {
-            equals: tenantId,
-          },
-        }
-      }
-      return false
-    },
     update: ({ req: { user } }) => {
       if (!user) return false
       if (user.role === 'admin') return true
-      if (user.tenant) {
-        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+      if (user.tenants && user.tenants.length > 0) {
+        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
         return {
           tenant: {
-            equals: tenantId,
+            in: tenantIds,
           },
         }
       }
@@ -38,11 +25,24 @@ export const Posts: CollectionConfig = {
     delete: ({ req: { user } }) => {
       if (!user) return false
       if (user.role === 'admin') return true
-      if (user.tenant) {
-        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+      if (user.tenants && user.tenants.length > 0) {
+        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
         return {
           tenant: {
-            equals: tenantId,
+            in: tenantIds,
+          },
+        }
+      }
+      return false
+    },
+    read: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin') return true
+      if (user.tenants && user.tenants.length > 0) {
+        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
+        return {
+          tenant: {
+            in: tenantIds,
           },
         }
       }
@@ -166,13 +166,14 @@ export const Posts: CollectionConfig = {
       hooks: {
         beforeValidate: [
           ({ req, value }) => {
-            // Auto-assign tenant for non-admins
-            if (req.user && req.user.role !== 'admin' && req.user.tenant) {
-              const myTenantId = typeof req.user.tenant === 'object' ? req.user.tenant.id : req.user.tenant
+            // Auto-assign tenant for non-admins. Use the first tenant if multiple exist.
+            if (req.user && req.user.role !== 'admin' && req.user.tenants && req.user.tenants.length > 0) {
+              const firstTenant = req.user.tenants[0]
+              const myTenantId = typeof firstTenant === 'object' ? firstTenant.id : firstTenant
               return myTenantId
             }
             return value
-          }
+          },
         ]
       },
       admin: {

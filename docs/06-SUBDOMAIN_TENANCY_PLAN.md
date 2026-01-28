@@ -1,7 +1,7 @@
 # Subdomain Multi-Tenancy Architecture: SMM Hub + Postiz
 
-## 1. Status: IMPLEMENTED (Level 2)
-We have successfully transitioned from URL parameters (`?workspace=slug`) to **Subdomain Isolation**. This provides a professional "immersed" experience where each tenant operates in their own scoped environment.
+## 1. Status: IMPLEMENTED (Level 3)
+We have successfully implemented **Enterprise-Grade Multi-Tenancy**. The system now supports a "GitHub-style" membership model where a single user can manage multiple businesses with a seamless workspace switcher.
 
 ### URL Structure (Local Dev)
 - **Global Admin**: `https://admin.smmhub.localhost/admin`
@@ -12,20 +12,18 @@ We have successfully transitioned from URL parameters (`?workspace=slug`) to **S
 
 ## 2. Implementation Details
 
-### A. Payload CMS (`Tenants` Collection)
-- Added `subdomain` field: Mandatory, unique, regex validated (`^[a-z0-9-]+$`).
-- Protected subdomains (www, admin, api, etc.) are restricted via validation hook.
-- `postizApiKey` is now `readOnly` in Admin UI as it is auto-provisioned.
+### A. Payload CMS (`Users` Collection)
+- **Many-to-Many Relationships**: Users are no longer tied to one tenant. They have a `tenants` relationship field with `hasMany: true`.
+- **Membership Sync Hook**: `syncPostizMemberships` fires on `afterChange`. It uses direct SQL to ensure the Postiz database matches the CMS state perfectly.
+- **Seat Management**: `enforceSeatLimits` hook prevents agencies from adding more users than their `seatLimit` allows.
 
-### B. Automated Provisioning
-- The `afterChange` hook on `Tenants` now uses the `subdomain` as the official `slug` for the Postiz Organization.
-- Direct SQL insertion into Postiz `Organization` and `UserOrganization` tables ensures real, persistent workspaces and owner linking.
+### B. Platform Admin Oversight
+- **Automatic Auto-Join**: The Postiz provisioning logic now automatically adds `admin@example.com` to **every** new organization.
+- **Support Switcher**: Superadmins can log into any agency's Postiz subdomain and use the Workspace Switcher to jump between clients for debugging.
 
-### C. Caddy Reverse Proxy
-- Acts as the single entry point for all traffic.
-- Handles wildcard SSL/TLS for `*.smmhub.localhost` and `*.postiz.localhost`.
-- Manages CORS headers and preflight `OPTIONS` requests at the edge.
-- Routes Postiz traffic directly to internal orchestrator (port 5000) while preserving Host headers.
+### C. Postiz Hardening
+- **Physical .env Injection**: Resolved stability issues where Postiz backend would hang silently by programmatically injecting a physical `.env` file into the container.
+- **Lockdown Mode**: `DISABLE_REGISTRATION: 'true'` ensures that the CMS is the **only** entry point for new users, preventing clients from bypassing seat limits.
 
 ### D. Multi-Tenant Middleware
 - `src/middleware.ts` extracts the subdomain from the Host header.
@@ -36,31 +34,23 @@ We have successfully transitioned from URL parameters (`?workspace=slug`) to **S
 
 ## 3. Configuration Summary
 
-### Caddyfile Key Logic
-```caddy
-*.postiz.localhost {
-    header {
-        Access-Control-Allow-Origin {header.Origin}
-        Access-Control-Allow-Credentials "true"
-    }
-    reverse_proxy postiz:5000 {
-        header_up Host {host}
-    }
-}
-```
+### Membership Sync Logic (SQL)
+```sql
+-- Create User if missing
+INSERT INTO "User" (email, password, ...) VALUES ($1, $2, ...) ON CONFLICT DO NOTHING;
 
-### Postiz Environment Key Settings
-- `NEXT_PUBLIC_BACKEND_URL: '/api'` (Relative path for same-origin reliability).
-- `MAIN_URL` & `FRONTEND_URL` set to `https://postiz.localhost`.
+-- Link to Organization
+INSERT INTO "UserOrganization" (userId, organizationId, role) VALUES ($1, $2, 'ADMIN');
+```
 
 ---
 
 ## 4. Operational Commands
 
-### Adding New Subdomains (Local)
-Add to `/etc/hosts`:
-```text
-127.0.0.1  newagency.smmhub.localhost newagency.postiz.localhost
+### Global Repair Script
+If the CMS and Postiz get out of sync, run the repair script:
+```bash
+cd cms && npx tsx src/sync-all-memberships.ts
 ```
 
 ### Creating Tenants
@@ -70,7 +60,7 @@ cd cms && npx tsx src/create-tenant-auto.ts
 
 ---
 
-## 5. Next Steps (Level 3)
-- [x] **Row-Level Security**: Implement access control hooks in SMM Hub that utilize the `X-Tenant-Subdomain` header to auto-filter all collection queries.
+## 5. Next Steps (Level 4)
+- [ ] **Mobile App Auth**: Connect the Flutter app to this multi-tenant backend using header injection.
 - [ ] **Custom Domain Support**: Add support for agency-owned domains (e.g., `social.nebula.com`).
-- [ ] **Global Dashboard**: Build a system-wide analytics view for Superadmins using the Master Postiz Key.
+- [ ] **Agency Dashboard**: Build a custom view for Agency Owners to manage their seats and credits.

@@ -62,8 +62,8 @@ export class PostizClient {
    * We insert directly into the Postiz database to create a real Organization
    * and link the creating user to it.
    */
-  async createWorkspace(tenantName: string, tenantSlug: string, ownerEmail?: string): Promise<{ apiKey: string }> {
-    console.log(`[Postiz] SQL Provisioning for: ${tenantName} (Owner: ${ownerEmail || 'None'})`)
+  async createWorkspace(tenantName: string, tenantSlug: string, ownerEmails: string[] = []): Promise<{ apiKey: string }> {
+    console.log(`[Postiz] SQL Provisioning for: ${tenantName} (Members: ${ownerEmails.join(', ') || 'None'})`)
     
     const client = new Client({
       connectionString: this.config.databaseUrl,
@@ -76,6 +76,12 @@ export class PostizClient {
       const apiKey = crypto.randomBytes(32).toString('hex')
       const now = new Date()
 
+      // Always include global admin for platform oversight
+      const globalAdminEmail = 'admin@example.com'
+      if (!ownerEmails.includes(globalAdminEmail)) {
+        ownerEmails.push(globalAdminEmail)
+      }
+
       // 1. Insert Organization record
       await client.query(
         `INSERT INTO "Organization" (id, name, "apiKey", "createdAt", "updatedAt", "allowTrial", "isTrailing") 
@@ -83,61 +89,108 @@ export class PostizClient {
         [orgId, tenantName, apiKey, now, now, false, false]
       )
 
-      // 2. Link User to Organization (if ownerEmail provided)
-      if (ownerEmail) {
+      // 2. Link Users to Organization
+      for (const email of ownerEmails) {
         // Find the user in Postiz by email
-        let userRes = await client.query('SELECT id FROM "User" WHERE email = $1', [ownerEmail])
+        const userRes = await client.query('SELECT id FROM "User" WHERE email = $1', [email])
         
         let userId;
 
         if (userRes.rows.length === 0) {
-             console.log(`[Postiz] User ${ownerEmail} not found. Creating new user...`)
+             console.log(`[Postiz] User ${email} not found. Creating new user...`)
              userId = crypto.randomUUID()
-             // Hash for 'password123' (Generated via docker exec inside Postiz)
+             // Hash for 'password123'
              const passwordHash = '$2b$10$Gkg6GRRryQQ7XBepnPeMpuzjVCZl0PqD8wWQZbBulbxL1Tb/YJw8S' 
              
              await client.query(
                 `INSERT INTO "User" (id, email, password, "providerName", "isSuperAdmin", "audience", "timezone", "createdAt", "updatedAt", "lastReadNotifications", "activated", "connectedAccount", "lastOnline", "sendSuccessEmails", "sendFailureEmails")
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-                 [
-                     userId, 
-                     ownerEmail, 
-                     passwordHash, 
-                     'LOCAL', 
-                     false, 
-                     0, 
-                     0, 
-                     now, 
-                     now, 
-                     now, 
-                     true, 
-                     false, 
-                     now, 
-                     true, 
-                     true
-                 ]
+                 [userId, email, passwordHash, 'LOCAL', false, 0, 0, now, now, now, true, false, now, true, true]
              )
-             console.log(`[Postiz] Created new user ${ownerEmail} with password 'password123'`)
         } else {
             userId = userRes.rows[0].id
         }
 
         const userOrgId = crypto.randomUUID()
-          
         await client.query(
             `INSERT INTO "UserOrganization" (id, "userId", "organizationId", role, "createdAt", "updatedAt", disabled) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [userOrgId, userId, orgId, 'ADMIN', now, now, false]
         )
-        console.log(`[Postiz] Linked user ${ownerEmail} to new Organization as ADMIN.`)
+        console.log(`[Postiz] Linked user ${email} to Organization ${tenantName}`)
       }
 
       console.log(`[Postiz] Successfully provisioned Organization ${orgId}.`)
-      
       return { apiKey }
     } catch (err: any) {
       console.error('[Postiz] SQL Provisioning Error:', err.message)
       throw new Error(`Failed to provision Postiz database: ${err.message}`)
+    } finally {
+      await client.end()
+    }
+  }
+
+  /**
+   * SYNC MEMBERSHIP (Freelancer Model)
+   * Links a user to a specific organization in Postiz using direct SQL.
+   */
+  async syncMembership(email: string, tenantPostizApiKey: string, action: 'link' | 'unlink'): Promise<void> {
+    console.log(`[Postiz] Syncing Membership: ${email} -> ${action} (Key: ${tenantPostizApiKey.substring(0, 10)}...)`)
+    
+    const client = new Client({
+      connectionString: this.config.databaseUrl,
+    })
+
+    try {
+      await client.connect()
+      const now = new Date()
+
+      // 1. Find the Organization by API Key
+      const orgRes = await client.query('SELECT id, name FROM "Organization" WHERE "apiKey" = $1', [tenantPostizApiKey])
+      if (orgRes.rows.length === 0) {
+        console.warn(`[Postiz] Sync Warning: Organization with key ${tenantPostizApiKey.substring(0, 5)}... not found.`)
+        return
+      }
+      const orgId = orgRes.rows[0].id
+
+      // 2. Find or Create the User
+      const userRes = await client.query('SELECT id FROM "User" WHERE email = $1', [email])
+      let userId;
+
+      if (userRes.rows.length === 0) {
+        if (action === 'unlink') return // User doesn't exist, nothing to unlink
+        
+        console.log(`[Postiz] Creating User for Membership: ${email}`)
+        userId = crypto.randomUUID()
+        const passwordHash = '$2b$10$Gkg6GRRryQQ7XBepnPeMpuzjVCZl0PqD8wWQZbBulbxL1Tb/YJw8S' // password123
+        await client.query(
+          `INSERT INTO "User" (id, email, password, "providerName", "isSuperAdmin", "audience", "timezone", "createdAt", "updatedAt", "lastReadNotifications", "activated", "connectedAccount", "lastOnline", "sendSuccessEmails", "sendFailureEmails")
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+           [userId, email, passwordHash, 'LOCAL', false, 0, 0, now, now, now, true, false, now, true, true]
+        )
+      } else {
+        userId = userRes.rows[0].id
+      }
+
+      // 3. Handle Link/Unlink
+      if (action === 'link') {
+        // Check if already linked
+        const existing = await client.query('SELECT id FROM "UserOrganization" WHERE "userId" = $1 AND "organizationId" = $2', [userId, orgId])
+        if (existing.rows.length === 0) {
+          await client.query(
+            `INSERT INTO "UserOrganization" (id, "userId", "organizationId", role, "createdAt", "updatedAt", disabled) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [crypto.randomUUID(), userId, orgId, 'ADMIN', now, now, false]
+          )
+          console.log(`[Postiz] Linked ${email} to ${orgRes.rows[0].name}`)
+        }
+      } else {
+        await client.query('DELETE FROM "UserOrganization" WHERE "userId" = $1 AND "organizationId" = $2', [userId, orgId])
+        console.log(`[Postiz] Unlinked ${email} from ${orgRes.rows[0].name}`)
+      }
+
+    } catch (err: any) {
+      console.error(`[Postiz] Membership Sync Error:`, err.message)
     } finally {
       await client.end()
     }

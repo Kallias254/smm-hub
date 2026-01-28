@@ -18,10 +18,14 @@ async function testSatori() {
   console.log('✨ Applying Gold Standard Template...')
   const pngBuffer = await generateBrandedImage({
     imageUrl: base64Image,
-    price: 'KES 85,000,000',
-    title: 'Luxury Villa in Karen',
     agencyLogo: 'https://cdn-icons-png.flaticon.com/512/69/69840.png', // Generic "House" icon
     primaryColor: '#FFD700', // PURE GOLD
+    data: {
+      template: 'real-estate-listing',
+      price: 'KES 85,000,000',
+      location: 'Karen, Nairobi',
+      features: 'Luxury Villa | 5 Bed | Pool',
+    }
   })
 
   // 3. Save it to disk so you can see it

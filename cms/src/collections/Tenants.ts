@@ -1,5 +1,5 @@
 import { CollectionConfig } from 'payload'
-import { createPostizWorkspace } from './Tenants/hooks/createPostizWorkspace'
+import { createPostizWorkspace } from './Tenants/hooks/createPostizWorkspace.ts'
 
 export const Tenants: CollectionConfig = {
   slug: 'tenants',
@@ -15,12 +15,12 @@ export const Tenants: CollectionConfig = {
       if (!user) return false
       if (user.role === 'admin') return true
       
-      // Users can only see their own tenant
-      if (user.tenant) {
-        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+      // Users can only see their own tenants
+      if (user.tenants && user.tenants.length > 0) {
+        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
         return {
           id: {
-            equals: tenantId,
+            in: tenantIds,
           },
         }
       }
@@ -31,12 +31,12 @@ export const Tenants: CollectionConfig = {
       if (!user) return false
       if (user.role === 'admin') return true
       
-      // Agency Owners can update their own tenant
-      if (user.role === 'tenant_owner' && user.tenant) {
-        const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+      // Agency Owners can update their own tenants
+      if (user.role === 'tenant_owner' && user.tenants && user.tenants.length > 0) {
+        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
         return {
           id: {
-            equals: tenantId,
+            in: tenantIds,
           },
         }
       }
@@ -68,7 +68,7 @@ export const Tenants: CollectionConfig = {
       admin: {
         description: 'The subdomain for this agency (e.g. "nebula" for nebula.smmhub.localhost). Use only lowercase letters, numbers, and hyphens.',
       },
-      validate: (val: string) => {
+      validate: (val: any) => {
         if (!val) return 'Subdomain is required'
         const pattern = /^[a-z0-9-]+$/
         if (!pattern.test(val)) return 'Subdomain can only contain lowercase letters, numbers, and hyphens'
@@ -124,6 +124,16 @@ export const Tenants: CollectionConfig = {
           label: 'Video Generation Credits',
           admin: {
             description: 'Remaining credits for branded video generation',
+          },
+        },
+        {
+          name: 'seatLimit',
+          type: 'number',
+          defaultValue: 5,
+          required: true,
+          label: 'User Seat Limit',
+          admin: {
+            description: 'Maximum number of users/freelancers allowed for this tenant.',
           },
         },
         {

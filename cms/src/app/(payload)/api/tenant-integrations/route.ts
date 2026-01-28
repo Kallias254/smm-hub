@@ -18,8 +18,11 @@ export const GET = async () => {
         let tenantSlug = 'global'
         let tenantSubdomain = 'admin'
     
-        if (user.tenant) {
-          const tenantId = typeof user.tenant === 'object' ? user.tenant.id : user.tenant
+        // HACK: For now, just use the FIRST tenant if a user belongs to multiple.
+        // A real "Freelancer Mode" would require a tenant-switcher context passed via headers.
+        if (user.tenants && user.tenants.length > 0) {
+          const firstTenant = user.tenants[0]
+          const tenantId = typeof firstTenant === 'object' ? firstTenant.id : firstTenant
           const tenant = await payload.findByID({
             collection: 'tenants',
             id: tenantId,

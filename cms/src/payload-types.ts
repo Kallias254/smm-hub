@@ -144,7 +144,7 @@ export interface UserAuthOperations {
 export interface User {
   id: number;
   role: 'admin' | 'tenant_owner' | 'agent';
-  tenant?: (number | null) | Tenant;
+  tenants?: (number | Tenant)[] | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -188,12 +188,16 @@ export interface Tenant {
      */
     logo?: (number | null) | Media;
   };
-  billing?: {
+  billing: {
     plan?: ('starter' | 'pro' | 'agency') | null;
     /**
      * Remaining credits for branded video generation
      */
     credits?: number | null;
+    /**
+     * Maximum number of users/freelancers allowed for this tenant.
+     */
+    seatLimit: number;
     /**
      * Paybill or Till Number for this client
      */
@@ -626,7 +630,7 @@ export interface PayloadMigration {
  */
 export interface UsersSelect<T extends boolean = true> {
   role?: T;
-  tenant?: T;
+  tenants?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -684,6 +688,7 @@ export interface TenantsSelect<T extends boolean = true> {
     | {
         plan?: T;
         credits?: T;
+        seatLimit?: T;
         mpesaShortcode?: T;
         subscriptionStatus?: T;
       };

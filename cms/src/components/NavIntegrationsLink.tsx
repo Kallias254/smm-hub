@@ -10,7 +10,7 @@ const NavIntegrationsLink: React.FC = () => {
   // Only show the Integrations link if the user is assigned to a tenant
   // or if they are a superadmin who explicitly wants to see global integrations.
   // For now, we hide it for global admins without a tenant to clean up the UI.
-  if (!user || !user.tenant) {
+  if (!user || !(user as any).tenants || (user as any).tenants.length === 0) {
     return null
   }
 

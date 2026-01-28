@@ -48,19 +48,19 @@ export const POST = async (req: Request) => {
         id: payment.id,
         data: {
             status: status,
-            transactionId: mpesaReceiptNumber,
-            rawCallback: callbackData,
+            transactionId: transactionId,
+            rawCallback: callback,
         }
     })
 
     if (status === 'completed') {
-        console.log(`✅ Payment verified: ${mpesaReceiptNumber}`)
+        console.log(`✅ Payment verified: ${transactionId}`)
     } else {
         console.log(`❌ Payment failed or cancelled.`)
     }
 
     return NextResponse.json({ received: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Callback Error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

@@ -11,11 +11,11 @@ export const Campaigns: CollectionConfig = {
     update: ({ req: { user } }) => {
       if (!user) return false
       if (user.role === "admin") return true
-      if (user.tenant) {
-        const tenantId = typeof user.tenant === "object" ? user.tenant.id : user.tenant
+      if (user.tenants && user.tenants.length > 0) {
+        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
         return {
           tenant: {
-            equals: tenantId,
+            in: tenantIds,
           },
         }
       }
@@ -24,11 +24,11 @@ export const Campaigns: CollectionConfig = {
     delete: ({ req: { user } }) => {
       if (!user) return false
       if (user.role === "admin") return true
-      if (user.tenant) {
-        const tenantId = typeof user.tenant === "object" ? user.tenant.id : user.tenant
+      if (user.tenants && user.tenants.length > 0) {
+        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
         return {
           tenant: {
-            equals: tenantId,
+            in: tenantIds,
           },
         }
       }
@@ -37,11 +37,11 @@ export const Campaigns: CollectionConfig = {
     read: ({ req: { user } }) => {
       if (!user) return false
       if (user.role === "admin") return true
-      if (user.tenant) {
-        const tenantId = typeof user.tenant === "object" ? user.tenant.id : user.tenant
+      if (user.tenants && user.tenants.length > 0) {
+        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
         return {
           tenant: {
-            equals: tenantId,
+            in: tenantIds,
           },
         }
       }
