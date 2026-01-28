@@ -11,12 +11,13 @@ describe('Payments & M-Pesa Integration', () => {
     payload = await getPayload({ config: payloadConfig })
 
     // 1. Create a Test Tenant
+    const uniqueId = Date.now()
     const tenant = await payload.create({
       collection: 'tenants',
       data: {
-        name: 'Payment Test Agency',
-        slug: 'pay-test-agency',
-        subdomain: 'paytest',
+        name: `Payment Test Agency ${uniqueId}`,
+        slug: `pay-test-agency-${uniqueId}`,
+        subdomain: `paytest${uniqueId}`,
         billing: {
           credits: 0, // Start with 0
         },

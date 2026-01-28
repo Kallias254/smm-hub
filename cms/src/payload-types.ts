@@ -298,6 +298,40 @@ export interface Post {
         blockName?: string | null;
         blockType: 'sports-fixture';
       }
+    | {
+        /**
+         * Flexible JSON data: { price, salePrice, productName, stockStatus: "in_stock" | "sold_out", sku }
+         */
+        data:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        id?: string | null;
+        blockName?: string | null;
+        blockType: 'retail-product';
+      }
+    | {
+        /**
+         * Flexible JSON data: { price, duration, inclusions: [], serviceCode, availability: "available" | "booked" }
+         */
+        data:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        id?: string | null;
+        blockName?: string | null;
+        blockType: 'service-package';
+      }
   )[];
   tenant?: (number | null) | Tenant;
   campaign?: (number | null) | Campaign;
@@ -693,6 +727,20 @@ export interface PostsSelect<T extends boolean = true> {
               blockName?: T;
             };
         'sports-fixture'?:
+          | T
+          | {
+              data?: T;
+              id?: T;
+              blockName?: T;
+            };
+        'retail-product'?:
+          | T
+          | {
+              data?: T;
+              id?: T;
+              blockName?: T;
+            };
+        'service-package'?:
           | T
           | {
               data?: T;
