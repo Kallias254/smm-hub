@@ -65,6 +65,7 @@ async function createTenant() {
         billing: {
             plan: 'starter',
             credits: 20,
+            seatLimit: 5,
             subscriptionStatus: 'active'
         },
         integrations: {

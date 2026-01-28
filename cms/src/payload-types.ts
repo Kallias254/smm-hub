@@ -72,7 +72,6 @@ export interface Config {
     tenants: Tenant;
     campaigns: Campaign;
     posts: Post;
-    'content-groups': ContentGroup;
     payments: Payment;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
@@ -87,7 +86,6 @@ export interface Config {
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     campaigns: CampaignsSelect<false> | CampaignsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
-    'content-groups': ContentGroupsSelect<false> | ContentGroupsSelect<true>;
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
@@ -203,6 +201,14 @@ export interface Tenant {
      */
     mpesaShortcode?: string | null;
     subscriptionStatus?: ('active' | 'past_due' | 'cancelled') | null;
+    /**
+     * Defines the value level and multiplier for this tenant.
+     */
+    serviceTier: 'self_service' | 'managed' | 'elite';
+    /**
+     * Advanced: Manual override for credit burn rate.
+     */
+    costMultiplier?: number | null;
   };
   integrations?: {
     /**
@@ -249,11 +255,30 @@ export interface Media {
 export interface Campaign {
   id: number;
   title: string;
-  tenant?: (number | null) | Tenant;
-  budget?: number | null;
+  tenant: number | Tenant;
+  status?: ('active' | 'paused' | 'draft' | 'completed') | null;
+  scheduleMode: 'fixed' | 'evergreen';
+  strategy?: ('cycle' | 'shuffle') | null;
   startDate: string;
   endDate?: string | null;
-  status?: ('draft' | 'active' | 'completed' | 'paused') | null;
+  automation?: {
+    frequency?: ('manual' | 'daily' | 'weekly' | 'monthly') | null;
+    timeOfDay?: string | null;
+    dayOfWeek?: ('0' | '1' | '2' | '3' | '4' | '5' | '6') | null;
+  };
+  resources: {
+    /**
+     * Total generation credits assigned to this specific campaign.
+     */
+    allocatedCredits: number;
+    /**
+     * Automatically calculated based on your schedule settings.
+     */
+    projectedUsage?: string | null;
+  };
+  nextRun?: string | null;
+  lastRun?: string | null;
+  defaultChannels?: ('facebook' | 'instagram' | 'linkedin' | 'twitter' | 'whatsapp_status')[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -338,11 +363,10 @@ export interface Post {
       }
   )[];
   tenant?: (number | null) | Tenant;
-  campaign?: (number | null) | Campaign;
   /**
-   * If set, this post belongs to an Evergreen Library.
+   * Link this post to a specific Campaign or Content Library.
    */
-  contentGroup?: (number | null) | ContentGroup;
+  campaign?: (number | null) | Campaign;
   usageStats?: {
     usageCount?: number | null;
     lastUsedAt?: string | null;
@@ -384,28 +408,6 @@ export interface Post {
      */
     brandedMedia?: (number | null) | Media;
   };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "content-groups".
- */
-export interface ContentGroup {
-  id: number;
-  title: string;
-  tenant: number | Tenant;
-  status?: ('active' | 'paused') | null;
-  frequency: 'daily' | 'weekly' | 'monthly';
-  timeOfDay: string;
-  dayOfWeek?: ('0' | '1' | '2' | '3' | '4' | '5' | '6') | null;
-  /**
-   * How should we pick the next post from this group?
-   */
-  strategy?: ('cycle' | 'shuffle') | null;
-  nextRun?: string | null;
-  lastRun?: string | null;
-  channels?: ('facebook' | 'instagram' | 'linkedin' | 'twitter' | 'whatsapp_status')[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -575,10 +577,6 @@ export interface PayloadLockedDocument {
         value: number | Post;
       } | null)
     | ({
-        relationTo: 'content-groups';
-        value: number | ContentGroup;
-      } | null)
-    | ({
         relationTo: 'payments';
         value: number | Payment;
       } | null);
@@ -691,6 +689,8 @@ export interface TenantsSelect<T extends boolean = true> {
         seatLimit?: T;
         mpesaShortcode?: T;
         subscriptionStatus?: T;
+        serviceTier?: T;
+        costMultiplier?: T;
       };
   integrations?:
     | T
@@ -708,10 +708,27 @@ export interface TenantsSelect<T extends boolean = true> {
 export interface CampaignsSelect<T extends boolean = true> {
   title?: T;
   tenant?: T;
-  budget?: T;
+  status?: T;
+  scheduleMode?: T;
+  strategy?: T;
   startDate?: T;
   endDate?: T;
-  status?: T;
+  automation?:
+    | T
+    | {
+        frequency?: T;
+        timeOfDay?: T;
+        dayOfWeek?: T;
+      };
+  resources?:
+    | T
+    | {
+        allocatedCredits?: T;
+        projectedUsage?: T;
+      };
+  nextRun?: T;
+  lastRun?: T;
+  defaultChannels?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -755,7 +772,6 @@ export interface PostsSelect<T extends boolean = true> {
       };
   tenant?: T;
   campaign?: T;
-  contentGroup?: T;
   usageStats?:
     | T
     | {
@@ -781,24 +797,6 @@ export interface PostsSelect<T extends boolean = true> {
         rawMedia?: T;
         brandedMedia?: T;
       };
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "content-groups_select".
- */
-export interface ContentGroupsSelect<T extends boolean = true> {
-  title?: T;
-  tenant?: T;
-  status?: T;
-  frequency?: T;
-  timeOfDay?: T;
-  dayOfWeek?: T;
-  strategy?: T;
-  nextRun?: T;
-  lastRun?: T;
-  channels?: T;
   updatedAt?: T;
   createdAt?: T;
 }

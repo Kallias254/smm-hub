@@ -70,12 +70,16 @@ export const Posts: CollectionConfig = {
           })
           
           const isVideo = rawMedia.mimeType?.startsWith('video/')
-          const cost = isVideo ? 5 : 1
+          const baseCost = isVideo ? 5 : 1
+          
+          // Apply Service Tier Multiplier
+          const multiplier = tenant.billing?.costMultiplier || 1
+          const finalCost = baseCost * multiplier
           
           const credits = tenant.billing?.credits || 0
 
-          if (credits < cost) {
-             console.warn(`[CreativeEngine] Skipped generation for Tenant ${tenant.name}: Insufficient Credits (Has: ${credits}, Needs: ${cost}).`)
+          if (credits < finalCost) {
+             console.warn(`[CreativeEngine] Skipped generation for Tenant ${tenant.name}: Insufficient Credits (Has: ${credits}, Needs: ${finalCost}).`)
              return
           }
 
@@ -86,12 +90,12 @@ export const Posts: CollectionConfig = {
              data: {
                 billing: {
                     ...tenant.billing,
-                    credits: credits - cost,
+                    credits: credits - finalCost,
                 }
              },
              req, // Pass request context to maintain auth/transaction
           })
-          console.log(`[CreativeEngine] Deducted ${cost} credit(s) from ${tenant.name}. New Balance: ${credits - cost}`)
+          console.log(`[CreativeEngine] Deducted ${finalCost} credit(s) from ${tenant.name} (Base: ${baseCost}x${multiplier}). New Balance: ${credits - finalCost}`)
 
           // D. Proceed with Generation
           const taskSlug = isVideo ? 'generateBrandedVideo' : 'generateBrandedImage'
@@ -185,15 +189,9 @@ export const Posts: CollectionConfig = {
       name: 'campaign',
       type: 'relationship',
       relationTo: 'campaigns',
-      required: false, // Optional: Evergreen posts might not belong to a specific campaign
-    },
-    {
-      name: 'contentGroup',
-      type: 'relationship',
-      relationTo: 'content-groups',
-      label: 'Content Library (Optional)',
+      required: false,
       admin: {
-        description: 'If set, this post belongs to an Evergreen Library.',
+        description: 'Link this post to a specific Campaign or Content Library.',
       },
     },
     {

@@ -16,49 +16,48 @@ export const GET = async (req: Request) => {
     const payload = await getPayload({ config })
     const now = new Date()
 
-    // 1. Find Active Groups due for a run
-    const dueGroups = await payload.find({
-      collection: 'content-groups',
+    // 1. Find Active Campaigns due for a run
+    const dueCampaigns = await payload.find({
+      collection: 'campaigns',
       where: {
         and: [
           { status: { equals: 'active' } },
           { nextRun: { less_than_equal: now.toISOString() } },
+          { 'automation.frequency': { not_equals: 'manual' } },
         ],
       },
-      limit: 50, // Process in batches
+      limit: 50, 
     })
 
-    console.log(`[Evergreen Cron] Found ${dueGroups.docs.length} groups due.`)
+    console.log(`[Campaign Cron] Found ${dueCampaigns.docs.length} campaigns due.`)
 
-    const results = await Promise.all(dueGroups.docs.map(async (group) => {
+    const results = await Promise.all(dueCampaigns.docs.map(async (campaign) => {
       try {
         // 2. Find Candidate Posts
-        // We want the posts that haven't been used recently
         const candidates = await payload.find({
           collection: 'posts',
           where: {
-            contentGroup: { equals: group.id },
+            campaign: { equals: campaign.id },
           },
-          sort: 'usageStats.lastUsedAt', // Oldest used first (Cycle strategy default)
+          sort: 'usageStats.lastUsedAt',
           limit: 10, 
         })
 
         if (candidates.docs.length === 0) {
-            return { groupId: group.id, status: 'empty' }
+            return { campaignId: campaign.id, status: 'empty' }
         }
 
         // 3. Select Winner based on Strategy
         let winner = candidates.docs[0]
         
-        if (group.strategy === 'shuffle') {
+        if (campaign.automation?.strategy === 'shuffle') {
             const randomIndex = Math.floor(Math.random() * candidates.docs.length)
             winner = candidates.docs[randomIndex]
         }
         
         // 4. Trigger Distribution
-        // We use the Group's channels if defined, otherwise fall back to Post's channels
-        const targetChannels = group.channels && group.channels.length > 0 
-            ? group.channels 
+        const targetChannels = campaign.defaultChannels && campaign.defaultChannels.length > 0 
+            ? campaign.defaultChannels 
             : (winner.channels || [])
 
         if (targetChannels.length > 0) {
@@ -69,8 +68,6 @@ export const GET = async (req: Request) => {
                     channels: targetChannels,
                 }
             })
-        } else {
-             console.warn(`[Evergreen] Group ${group.title} has no channels.`)
         }
 
         // 5. Update Usage Stats on the Post
@@ -85,46 +82,43 @@ export const GET = async (req: Request) => {
             }
         })
 
-        // 6. Schedule Next Run for the Group
-        const nextRun = new Date() // Start from NOW, not the old scheduled time, to prevent catch-up loops
+        // 6. Schedule Next Run
+        const nextRun = new Date()
+        const freq = campaign.automation?.frequency
         
-        // Basic Frequency Logic
-        if (group.frequency === 'daily') {
+        if (freq === 'daily') {
              nextRun.setDate(nextRun.getDate() + 1)
-        } else if (group.frequency === 'weekly') {
+        } else if (freq === 'weekly') {
              nextRun.setDate(nextRun.getDate() + 7)
-        } else if (group.frequency === 'monthly') {
+        } else if (freq === 'monthly') {
              nextRun.setMonth(nextRun.getMonth() + 1)
         }
 
-        // Apply Time of Day (e.g. "09:00")
-        if (group.timeOfDay) {
-            const [hours, minutes] = group.timeOfDay.split(':').map(Number)
+        if (campaign.automation?.timeOfDay) {
+            const [hours, minutes] = campaign.automation.timeOfDay.split(':').map(Number)
             if (!isNaN(hours) && !isNaN(minutes)) {
                 nextRun.setHours(hours, minutes, 0, 0)
             }
         }
 
-        // Ensure it's in the future (if timeOfDay moved it back to this morning)
         if (nextRun <= now) {
-            if (group.frequency === 'daily') nextRun.setDate(nextRun.getDate() + 1)
-            // ... strict handling for others if needed
+            if (freq === 'daily') nextRun.setDate(nextRun.getDate() + 1)
         }
 
         await payload.update({
-            collection: 'content-groups',
-            id: group.id,
+            collection: 'campaigns',
+            id: campaign.id,
             data: {
                 nextRun: nextRun.toISOString(),
                 lastRun: now.toISOString(),
             }
         })
 
-        return { groupId: group.id, status: 'success', postId: winner.id, nextRun: nextRun.toISOString() }
+        return { campaignId: campaign.id, status: 'success', postId: winner.id, nextRun: nextRun.toISOString() }
 
       } catch (err: any) {
-        console.error(`[Evergreen Error] Group ${group.id}:`, err)
-        return { groupId: group.id, status: 'error', error: err.message }
+        console.error(`[Campaign Error] Campaign ${campaign.id}:`, err)
+        return { campaignId: campaign.id, status: 'error', error: err.message }
       }
     }))
 

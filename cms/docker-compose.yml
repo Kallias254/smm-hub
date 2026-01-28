@@ -35,6 +35,7 @@ services:
     environment:
       - DATABASE_URL=postgres://payload:payload@postgres:5432/payload
       - NEXT_PUBLIC_SERVER_URL=http://admin.smmhub.localhost
+      - S3_ENDPOINT=http://minio:9000
     networks:
       - postiz-network
 
@@ -78,6 +79,9 @@ services:
     volumes:
       - postiz-config:/config/
       - postiz-uploads:/uploads/
+      - ./.env.postiz:/app/.env:ro
+      - ./postiz-start.sh:/app/postiz-start.sh:ro
+    entrypoint: /app/postiz-start.sh
     # Removed direct port mapping, now handled by Caddy
     networks:
       - postiz-network

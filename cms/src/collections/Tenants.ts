@@ -153,6 +153,30 @@ export const Tenants: CollectionConfig = {
           ],
           defaultValue: 'active',
         },
+        {
+          name: 'serviceTier',
+          type: 'select',
+          defaultValue: 'self_service',
+          required: true,
+          options: [
+            { label: 'Self-Service (1x Cost)', value: 'self_service' },
+            { label: 'Managed (2x Cost)', value: 'managed' },
+            { label: 'Elite/Agency (5x Cost)', value: 'elite' },
+          ],
+          admin: {
+            description: 'Defines the value level and multiplier for this tenant.',
+          },
+        },
+        {
+          name: 'costMultiplier',
+          type: 'number',
+          defaultValue: 1,
+          required: true,
+          admin: {
+            description: 'Advanced: Manual override for credit burn rate.',
+            condition: (data, siblingData, { user }) => user?.role === 'admin',
+          },
+        },
       ],
     },
     {

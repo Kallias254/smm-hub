@@ -1,6 +1,7 @@
 import { headers } from 'next/headers'
 import { getPayload } from 'payload'
 import React from 'react'
+import Link from 'next/link'
 import config from '@/payload.config'
 import { StorefrontFactory } from './storefront/components/StorefrontFactory'
 import './styles.css'
@@ -26,9 +27,9 @@ export default async function HomePage() {
             The high-performance content manufacturing plant for modern agencies.
           </p>
           <div className="links flex gap-4 justify-center">
-            <a href="/admin" className="px-6 py-2 bg-white text-black font-bold rounded-full transition-transform active:scale-95">
+            <Link href="/admin" className="px-6 py-2 bg-white text-black font-bold rounded-full transition-transform active:scale-95">
               {user ? 'Go to Dashboard' : 'Login to Admin'}
-            </a>
+            </Link>
           </div>
         </div>
       </div>

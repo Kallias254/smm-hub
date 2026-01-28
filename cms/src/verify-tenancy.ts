@@ -45,7 +45,7 @@ async function verifyTenancy() {
                     slug,
                     subdomain,
                     branding: { primaryColor: '#000000' },
-                    billing: { plan: 'pro', credits: 100, subscriptionStatus: 'active' },
+                    billing: { plan: 'pro', credits: 100, seatLimit: 10, subscriptionStatus: 'active' },
                     integrations: { ingestionKey: 'test-key-' + slug }
                 },
                 user, // Context user

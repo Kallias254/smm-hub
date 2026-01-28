@@ -65,6 +65,12 @@ async function seed() {
         branding: {
           primaryColor: '#00ff00', // Sports Green
         },
+        billing: {
+          plan: 'agency',
+          credits: 100,
+          seatLimit: 20,
+          subscriptionStatus: 'active'
+        }
       },
     })
   }
@@ -78,6 +84,11 @@ async function seed() {
       tenant: tenant.id,
       startDate: new Date().toISOString(),
       status: 'active',
+      automation: {
+        frequency: 'daily',
+        timeOfDay: '09:00',
+        strategy: 'cycle'
+      }
     },
   })
 

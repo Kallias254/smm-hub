@@ -43,6 +43,7 @@ async function createTenantAuto() {
         billing: {
             plan: 'pro',
             credits: 50,
+            seatLimit: 10,
             subscriptionStatus: 'active'
         },
         integrations: {

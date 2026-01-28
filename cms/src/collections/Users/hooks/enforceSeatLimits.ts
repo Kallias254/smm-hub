@@ -37,7 +37,7 @@ export const enforceSeatLimits: CollectionBeforeValidateHook = async ({
       limit: 0,
     })
 
-    let currentCount = usersWithThisTenant.totalDocs
+    const currentCount = usersWithThisTenant.totalDocs
     
     // 3. Robust Check: If this is an update, check if user was already in the tenant
     const isNewToTenant = operation === 'create' || 

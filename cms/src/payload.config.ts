@@ -16,7 +16,6 @@ import { Media } from './collections/Media.ts'
 import { Tenants } from './collections/Tenants.ts'
 import { Campaigns } from './collections/Campaigns.ts'
 import { Posts } from './collections/Posts.ts'
-import { ContentGroups } from './collections/ContentGroups.ts'
 import { Payments } from './collections/Payments.ts'
 import { tasks } from './tasks/index.ts'
 import { s3Storage } from '@payloadcms/storage-s3'
@@ -28,6 +27,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
     components: {
+      beforeNavLinks: ['/components/TenantSwitcher'],
       afterNavLinks: ['/components/NavIntegrationsLink'],
       views: {
         integrations: {
@@ -37,7 +37,7 @@ export default buildConfig({
       },
     },
   },
-  collections: [Users, Media, Tenants, Campaigns, Posts, ContentGroups, Payments],
+  collections: [Users, Media, Tenants, Campaigns, Posts, Payments],
   jobs: {
     tasks,
     autoRun: [
