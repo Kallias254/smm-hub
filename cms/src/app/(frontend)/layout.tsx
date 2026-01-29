@@ -1,9 +1,12 @@
 import React from 'react'
+import '@mantine/core/styles.css'
+import { ColorSchemeScript, MantineProvider } from '@mantine/core'
+import { theme } from './theme'
 import './styles.css'
 
 export const metadata = {
-  description: 'A blank template using Payload in a Next.js app.',
-  title: 'Payload Blank Template',
+  description: 'The high-performance content manufacturing plant for modern agencies.',
+  title: 'SMM HUB',
 }
 
 export default async function RootLayout(props: { children: React.ReactNode }) {
@@ -11,8 +14,13 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
 
   return (
     <html lang="en">
+      <head>
+        <ColorSchemeScript defaultColorScheme="dark" />
+      </head>
       <body>
-        <main>{children}</main>
+        <MantineProvider theme={theme} defaultColorScheme="dark">
+          <main>{children}</main>
+        </MantineProvider>
       </body>
     </html>
   )

@@ -1,11 +1,11 @@
 import React from 'react'
 import { GenericProductCard } from './GenericProductCard'
+import { RealEstateCard } from './RealEstateCard'
 
 // Registry of Niche-Specific Components
 const ComponentRegistry: Record<string, React.FC<{ post: any }>> = {
-  // We will add RealEstateCard, RetailCard etc here as we build them.
-  'real-estate-listing': GenericProductCard, // Fallback for now
-  'sports-fixture': GenericProductCard,
+  'real-estate-listing': RealEstateCard,
+  'sports-fixture': GenericProductCard, // Placeholder
 }
 
 export const StorefrontFactory = ({ posts }: { posts: any[] }) => {
