@@ -35,5 +35,13 @@ export function middleware(request: NextRequest) {
 
 // Only run middleware on admin and api routes
 export const config = {
-  matcher: ['/admin/:path*', '/api/:path*'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 }
