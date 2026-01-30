@@ -85,8 +85,48 @@ a {
   }
 }
 
-svg {
-  vertical-align: middle;
+/* Interaction Utilities */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+.hover-lift:hover {
+  transform: translateY(-8px) !important;
+  box-shadow: var(--mantine-shadow-xl) !important;
+}
+
+.hover-zoom-container {
+  overflow: hidden;
+}
+
+.hover-zoom-container img {
+  transition: transform 0.6s ease !important;
+}
+
+.hover-zoom-container:hover img {
+  transform: scale(1.1) !important;
+}
+
+.hover-overlay-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.hover-overlay-container .overlay-element {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.hover-overlay-container:hover .overlay-element {
+  opacity: 1;
+}
+
+.hover-overlay-container:hover img {
+  transform: scale(1.05);
 }
 
 .home {

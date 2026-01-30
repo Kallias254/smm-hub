@@ -32,19 +32,7 @@ export const Media: CollectionConfig = {
       }
       return false
     },
-    read: ({ req: { user } }) => {
-      if (!user) return false
-      if (user.role === 'admin') return true
-      if (user.tenants && user.tenants.length > 0) {
-        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
-        return {
-          tenant: {
-            in: tenantIds,
-          },
-        }
-      }
-      return false
-    },
+    read: () => true,
   },
   upload: {
     staticDir: 'media',

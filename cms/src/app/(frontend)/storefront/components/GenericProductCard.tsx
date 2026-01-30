@@ -1,56 +1,106 @@
 'use client'
 
 import React from 'react'
-import { Card, Image, Text, Badge, Button, Group, Overlay } from '@mantine/core'
-import { IconBrandWhatsapp } from '@tabler/icons-react'
+import Link from 'next/link'
+import { Card, Image, Text, Badge, Button, Group, Stack, Box, ThemeIcon, Paper, rem } from '@mantine/core'
+import { IconBrandWhatsapp, IconArrowRight, IconTag, IconShoppingBag } from '@tabler/icons-react'
 
 /**
  * MODERN GENERIC CARD (Mantine Version)
- * This is the fallback for any niche we haven't built a specific UI for yet.
+ * Optimized for general products, services, or news.
  */
 export const GenericProductCard = ({ post }: { post: any }) => {
   const mediaUrl = post.assets?.brandedMedia?.url || post.assets?.rawMedia?.url
   
+  const campaignTitle = post.campaign?.title || 'Featured'
+  const data = post.content?.[0]?.data || {}
+  const price = data.price || data.salePrice
+  
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
-      <Card.Section>
-        {mediaUrl ? (
+    <Card 
+      shadow="sm" 
+      radius="lg" 
+      padding="0" 
+      h="100%"
+      withBorder
+      className="hover-lift"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Card.Section pos="relative">
+        <Box className="hover-zoom-container" style={{ 
+            overflow: 'hidden',
+        }}>
           <Image
             src={mediaUrl}
-            height={300}
+            height={240}
             alt={post.title}
             fallbackSrc="https://placehold.co/600x400?text=No+Preview"
           />
-        ) : (
-          <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#333', color: '#888' }}>
-            No Preview Available
-          </div>
+        </Box>
+        <Badge 
+          color="violet" 
+          variant="filled" 
+          size="sm"
+          radius="sm"
+          style={{ 
+            position: 'absolute', 
+            top: 12, 
+            left: 12, 
+            zIndex: 2,
+            boxShadow: '0 4px 8px rgba(0,0,0,0.2)' 
+          }}
+        >
+          {campaignTitle}
+        </Badge>
+        
+        {price && (
+           <Paper 
+             radius="xl" 
+             px="md"
+             py={4}
+             shadow="sm"
+             style={{
+               position: 'absolute', 
+               bottom: 12, 
+               right: 12, 
+               zIndex: 2,
+               backgroundColor: 'rgba(255, 255, 255, 0.95)',
+               color: 'black'
+             }}
+           >
+             <Text fw={800} size="sm">{price}</Text>
+           </Paper>
         )}
       </Card.Section>
 
-      <Group justify="space-between" mt="md" mb="xs">
-        <Text fw={500} lineClamp={1}>{post.title}</Text>
-        <Badge color="pink" variant="light">
-          {post.campaign?.title || 'Featured'}
-        </Badge>
-      </Group>
+      <Stack p="lg" gap="md" style={{ flex: 1 }}>
+        <Box style={{ flex: 1 }}>
+          <Text fw={700} size="lg" lineClamp={2} style={{ lineHeight: 1.3 }}>
+            {post.title}
+          </Text>
 
-      <Text size="sm" c="dimmed" lineClamp={2}>
-        {post.caption?.root?.children?.[0]?.children?.[0]?.text || 'No description available for this item.'}
-      </Text>
+          <Text size="sm" c="dimmed" mt="xs" lineClamp={3}>
+            {post.caption?.root?.children?.[0]?.children?.[0]?.text || 'No description available for this item.'}
+          </Text>
+        </Box>
 
-      <Button 
-        component="a"
-        href={`https://wa.me/?text=Hi, I am interested in ${encodeURIComponent(post.title)}`}
-        target="_blank"
-        color="blue" 
-        fullWidth 
-        mt="md" 
-        radius="md"
-        leftSection={<IconBrandWhatsapp size={18} />}
-      >
-        Interested?
-      </Button>
+        <Button 
+          component={Link}
+          href={`/listing/${post.id}`}
+          variant="light"
+          color="blue" 
+          fullWidth 
+          radius="md"
+          rightSection={<IconArrowRight size={18} />}
+          justify="space-between"
+          styles={{ root: { transition: 'background-color 0.2s' } }}
+        >
+          View Details
+        </Button>
+      </Stack>
     </Card>
   )
 }
