@@ -9,8 +9,9 @@ import { IconMapPin, IconBed, IconBath, IconMaximize, IconBrandWhatsapp, IconChe
 import { notFound } from 'next/navigation'
 import { MediaHero } from './MediaHero'
 import { PropertyGallery } from './PropertyGallery'
-import { ThemeToggle } from '@/components/ThemeToggle'
 import { MortgageCalculator } from './MortgageCalculator'
+import { StorefrontHeader } from '../../components/StorefrontHeader'
+import { StorefrontFooter } from '../../components/StorefrontFooter'
 
 function FeatureStat({ icon: Icon, label, value }: any) {
     if (!value) return null
@@ -192,6 +193,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
   const bedMatch = featuresStr.match(/(\d+)\s*Bed/)
   const bathMatch = featuresStr.match(/(\d+)\s*Bath/)
   const areaMatch = featuresStr.match(/(\d+)\s*sqft/)
+  const areaSqm = areaMatch ? Math.round(parseInt(areaMatch[1]) / 10.764) : null
 
   // Deduplicate: Filter out features that are already in the top stats bar
   const featuresList = featuresStr.split(',')
@@ -219,67 +221,6 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
 
   return (
     <Box mih="100vh" style={{ backgroundColor: 'var(--mantine-color-body)', color: 'var(--mantine-color-text)' }}>
-      {/* 1. Header / Navigation */}
-      <Box style={{ 
-        borderBottom: '1px solid var(--mantine-color-default-border)', 
-        backgroundColor: 'var(--mantine-color-body)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        backdropFilter: 'blur(12px)',
-        opacity: 0.98
-      }}>
-        <Container size="xl" py="sm">
-          <Group justify="space-between" wrap="nowrap">
-            <Group gap={{ base: 'xs', sm: 'xl' }} wrap="nowrap">
-                <Button 
-                    component={Link} 
-                    href="/" 
-                    variant="subtle" 
-                    color="blue" 
-                    leftSection={<IconChevronLeft size={18} />}
-                    size="sm"
-                    px={{ base: 4, xs: 'sm' }}
-                >
-                    <Text span visibleFrom="xs">Back to Listings</Text>
-                    <Text span hiddenFrom="xs">Back</Text>
-                </Button>
-
-                {tenant && (
-                    <Group gap="md" visibleFrom="md">
-                        <Divider orientation="vertical" />
-                        <Group 
-                            component={Link} 
-                            href="/" 
-                            gap="sm" 
-                            style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
-                        >
-                            {(tenant as any).branding?.logo?.url && (
-                                <img 
-                                    src={(tenant as any).branding.logo.url} 
-                                    style={{ height: 28, width: 'auto' }} 
-                                    alt="Logo" 
-                                />
-                            )}
-                            <Text fw={800} size="xs" style={{ letterSpacing: -0.5 }}>{tenant.name}</Text>
-                        </Group>
-                    </Group>
-                )}
-            </Group>
-
-            <Group gap="xs" wrap="nowrap">
-                 <ActionIcon variant="default" size="lg" visibleFrom="xs" title="Share">
-                    <IconShare size={18} />
-                 </ActionIcon>
-                 <ActionIcon variant="default" size="lg" visibleFrom="xs" title="Save">
-                    <IconHeart size={18} />
-                 </ActionIcon>
-                 <ThemeToggle />
-            </Group>
-          </Group>
-        </Container>
-      </Box>
-
       {/* 2. Hero Section (360 First) */}
       <MediaHero mediaUrl={mediaUrl} tourUrl={SAMPLE_360} title={post.title} />
 
@@ -346,7 +287,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
                                 <FeatureStat icon={IconHome} label="Type" value={data.propertyType || 'Apartment'} />
                                 <FeatureStat icon={IconBed} label="Bedrooms" value={bedMatch?.[1] || '0'} />
                                 <FeatureStat icon={IconBath} label="Bathrooms" value={bathMatch?.[1] || '0'} />
-                                <FeatureStat icon={IconRuler} label="Square Ft" value={areaMatch?.[1]} />
+                                <FeatureStat icon={IconRuler} label="SQM" value={areaSqm} />
                              </Group>
                         </Box>
                     )}
@@ -501,12 +442,22 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
                     {/* Agent Snippet */}
                     <Paper p="md" radius="md" withBorder style={{ backgroundColor: 'var(--mantine-color-default-hover)' }}>
                          <Group>
-                            <Avatar size="md" radius="xl" color="blue" variant="filled">AG</Avatar>
+                            <Avatar size="md" radius="xl" color="blue" variant="filled">
+                                {(data.agentName || 'AG').split(' ').map((n: string) => n[0]).join('')}
+                            </Avatar>
                             <Box style={{ flex: 1 }}>
-                                <Text fw={700} size="sm">Listing Agent</Text>
-                                <Text size="xs" c="dimmed">Premier Properties</Text>
+                                <Text fw={700} size="sm">{data.agentName || 'Listing Agent'}</Text>
+                                <Text size="xs" c="dimmed">Managed by {tenant?.name || 'Premier Properties'}</Text>
                             </Box>
-                            <ActionIcon variant="light" color="green" size="lg" radius="md" component="a" href={`https://wa.me/?text=Inquiry about ${post.title}`}>
+                            <ActionIcon 
+                                variant="light" 
+                                color="green" 
+                                size="lg" 
+                                radius="md" 
+                                component="a" 
+                                href={`https://wa.me/${data.agentPhone || '254700000000'}?text=Inquiry about ${post.title}`}
+                                target="_blank"
+                            >
                                 <IconBrandWhatsapp size={20} />
                             </ActionIcon>
                          </Group>
@@ -539,17 +490,6 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
       )}
       
       {/* Footer Simple */}
-      <Box py={80} style={{ borderTop: '1px solid var(--mantine-color-default-border)', backgroundColor: 'var(--mantine-color-body)' }}>
-          <Container size="xl" ta="center">
-              <Group justify="center" gap="lg" mb="xl">
-                  <Text fw={700}>SMM HUB Listings</Text>
-                  <Text c="dimmed">•</Text>
-                  <Anchor href="#" c="dimmed">Privacy Policy</Anchor>
-                  <Anchor href="#" c="dimmed">Terms of Service</Anchor>
-              </Group>
-              <Text c="dimmed" size="sm">© 2026 SMM Hub Listings. All rights reserved.</Text>
-          </Container>
-      </Box>
     </Box>
   )
 }

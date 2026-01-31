@@ -88,6 +88,9 @@ async function seedRealEstate() {
               data: {
                   price: 'KES 85,000,000',
                   location: 'Karen, Nairobi',
+                  propertyType: 'Villa',
+                  propertyCategory: 'Residential',
+                  propertyStatus: 'For Sale',
                   features: '5 Bed | 6 Bath | 0.5 Acre | Pool',
                   description: 'Exquisite modern villa with a private pool and lush gardens.',
                   agentName: 'Jane Doe',

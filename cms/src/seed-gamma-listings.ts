@@ -125,7 +125,10 @@ async function seedGammaListings() {
                 location: listing.location,
                 features: listing.features,
                 propertyType: listing.propertyType,
+                propertyCategory: 'Residential',
                 deposit: listing.deposit,
+                agentName: 'Gamma Agent',
+                agentPhone: '254700000000',
                 description: `A beautiful ${listing.propertyType} located in the heart of ${listing.location.split(',')[0]}. Featuring ${listing.features.split('|')[0].trim()} and premium finishes.`,
             }
         }]

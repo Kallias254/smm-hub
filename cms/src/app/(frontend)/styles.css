@@ -26,7 +26,8 @@ body {
   line-height: 32px;
 
   margin: 0;
-  color: rgb(1000, 1000, 1000);
+  color: var(--mantine-color-text);
+  background-color: var(--mantine-color-body);
 
   @media (max-width: 1024px) {
     font-size: 15px;
@@ -88,23 +89,32 @@ a {
 /* Interaction Utilities */
 .hover-lift {
   transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .hover-lift:hover {
-  transform: translateY(-8px) !important;
+  transform: translateY(-8px) translateZ(0) !important;
   box-shadow: var(--mantine-shadow-xl) !important;
 }
 
 .hover-zoom-container {
   overflow: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  /* Fix for sub-pixel bleed on some browsers */
+  outline: 1px solid transparent;
 }
 
 .hover-zoom-container img {
   transition: transform 0.6s ease !important;
+  backface-visibility: hidden;
+  will-change: transform;
 }
 
 .hover-zoom-container:hover img {
-  transform: scale(1.1) !important;
+  transform: scale(1.1) translateZ(0) !important;
 }
 
 .hover-overlay-container {
