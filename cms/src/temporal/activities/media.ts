@@ -6,7 +6,7 @@ import { getGlobalPayload } from '../payload-client.ts';
 export async function generateBrandedImageActivity(input: {
   mediaId: string;
   tenantId: string;
-  data: any;
+  data: Record<string, unknown>;
 }): Promise<{ generatedMediaId: string }> {
   const { mediaId, tenantId, data } = input;
   const payload = getGlobalPayload();

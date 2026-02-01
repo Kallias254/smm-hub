@@ -38,7 +38,7 @@ function ReviewCard({ name, text, rating, avatar }: { name: string; text: string
                     <Box><Text fw={800} size="sm">{name}</Text><Rating value={rating} readOnly size="xs" /></Box>
                     <ThemeIcon variant="light" color="blue" size="xl" radius="md" ml="auto" style={{ opacity: 0.2 }}><IconQuote size={32} /></ThemeIcon>
                 </Group>
-                <Text size="sm" c="dimmed" lh={1.6} fs="italic">"{text}"</Text>
+                <Text size="sm" c="dimmed" lh={1.6} fs="italic">&quot;{text}&quot;</Text>
             </Stack>
         </Paper>
     )
@@ -116,7 +116,7 @@ export default async function HomePage() {
       <Box py={80} style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
         <Container size="xl">
             <Group justify="space-between" align="flex-end" mb={40}>
-                <Box><Title order={2} size={rem(32)} fw={900}>Find Your Home By Area</Title><Text c="dimmed" size="lg" mt="xs">Explore properties in Nairobi's most sought-after neighborhoods.</Text></Box>
+                <Box><Title order={2} size={rem(32)} fw={900}>Find Your Home By Area</Title><Text c="dimmed" size="lg" mt="xs">Explore properties in Nairobi&apos;s most sought-after neighborhoods.</Text></Box>
                 <Button variant="subtle" color={primaryColor} rightSection={<IconArrowRight size={18} />}>View All Areas</Button>
             </Group>
             <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="xl">
