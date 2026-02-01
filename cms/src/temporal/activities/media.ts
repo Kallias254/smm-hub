@@ -1,7 +1,7 @@
-import { generateBrandedImage } from '../../creative-engine/generator';
+import { generateBrandedImage } from '../../creative-engine/generator.ts';
 import path from 'path';
 import fs from 'fs';
-import { payload } from 'payload'; // This assumes payload is initialized globally or we pass config
+import { getGlobalPayload } from '../payload-client.ts';
 
 export async function generateBrandedImageActivity(input: {
   mediaId: string;
@@ -9,6 +9,7 @@ export async function generateBrandedImageActivity(input: {
   data: any;
 }): Promise<{ generatedMediaId: string }> {
   const { mediaId, tenantId, data } = input;
+  const payload = getGlobalPayload();
 
   // Note: Activities should ideally be stateless and receive all data needed,
   // but since we are on the same machine as Payload, we can use the local filesystem/DB.
@@ -65,6 +66,7 @@ export async function generateBrandedImageActivity(input: {
 }
 
 export async function updatePostMediaActivity(postId: string, mediaId: string): Promise<void> {
+  const payload = getGlobalPayload();
   await payload.update({
     collection: 'posts',
     id: postId,
