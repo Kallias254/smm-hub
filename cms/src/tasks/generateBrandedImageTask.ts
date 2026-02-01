@@ -1,5 +1,6 @@
 import { TaskConfig } from 'payload'
 import { generateBrandedImage } from '../creative-engine/generator'
+import { getTemporalClient } from '../temporal/client'
 import path from 'path'
 import fs from 'fs'
 
@@ -23,6 +24,38 @@ export const generateBrandedImageTask: TaskConfig<{ input: GenerateBrandedImageI
     const { postId, mediaId, tenantId, data } = input
 
     try {
+      // --- TEMPORAL SWITCH ---
+      if (process.env.TEMPORAL_ENABLED === 'true') {
+        console.log('[Task] Delegating to Temporal Workflow...')
+        const client = await getTemporalClient()
+        
+        // Handle populated objects for Temporal input
+        const safeMediaId = typeof mediaId === 'object' && mediaId !== null ? (mediaId as any).id : mediaId
+        const safeTenantId = typeof tenantId === 'object' && tenantId !== null ? (tenantId as any).id : tenantId
+
+        const handle = await client.workflow.start('BrandingWorkflow', {
+          taskQueue: 'branding-queue',
+          workflowId: `branding-${postId}-${Date.now()}`,
+          args: [{
+            postId: String(postId),
+            mediaId: String(safeMediaId),
+            tenantId: String(safeTenantId),
+            data
+          }]
+        })
+
+        console.log(`[Task] Temporal Workflow started: ${handle.workflowId}`)
+        
+        // We return success immediately. The Workflow handles the actual DB update later.
+        return {
+          output: {
+            success: true,
+            // generatedMediaId is unknown at this point, but that's okay because the Workflow updates the Post directly.
+          }
+        }
+      }
+      // -----------------------
+
       // 1. Fetch Media and Tenant branding
       // Handle populated objects
       const safeMediaId = typeof mediaId === 'object' && mediaId !== null ? (mediaId as any).id : mediaId

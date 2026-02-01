@@ -13,6 +13,7 @@
     "lint": "cross-env NODE_OPTIONS=--no-deprecation next lint",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
+    "worker": "cross-env NODE_OPTIONS=--no-deprecation tsx ./src/temporal/worker.ts",
     "test": "pnpm run test:int && pnpm run test:e2e",
     "test:e2e": "cross-env NODE_OPTIONS=\"--no-deprecation --no-experimental-strip-types\" pnpm exec playwright test",
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts"
@@ -35,6 +36,10 @@
     "@payloadcms/storage-s3": "3.72.0",
     "@payloadcms/ui": "3.72.0",
     "@tabler/icons-react": "^3.36.1",
+    "@temporalio/activity": "^1.14.1",
+    "@temporalio/client": "^1.14.1",
+    "@temporalio/worker": "^1.14.1",
+    "@temporalio/workflow": "^1.14.1",
     "cross-env": "^7.0.3",
     "dotenv": "16.4.7",
     "firebase-admin": "^13.6.0",
