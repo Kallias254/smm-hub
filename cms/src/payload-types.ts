@@ -73,6 +73,7 @@ export interface Config {
     campaigns: Campaign;
     posts: Post;
     payments: Payment;
+    leads: Lead;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -87,6 +88,7 @@ export interface Config {
     campaigns: CampaignsSelect<false> | CampaignsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
+    leads: LeadsSelect<false> | LeadsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -440,6 +442,25 @@ export interface Payment {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "leads".
+ */
+export interface Lead {
+  id: number;
+  type: 'booking' | 'whatsapp' | 'inquiry';
+  status?: ('pending' | 'verified' | 'contacted' | 'closed') | null;
+  phone: string;
+  bookingDetails?: {
+    date: string;
+    slot?: string | null;
+    method?: ('In-Person' | 'Video Chat') | null;
+  };
+  post?: (number | null) | Post;
+  tenant: number | Tenant;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -579,6 +600,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'payments';
         value: number | Payment;
+      } | null)
+    | ({
+        relationTo: 'leads';
+        value: number | Lead;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -812,6 +837,26 @@ export interface PaymentsSelect<T extends boolean = true> {
   checkoutRequestId?: T;
   status?: T;
   rawCallback?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "leads_select".
+ */
+export interface LeadsSelect<T extends boolean = true> {
+  type?: T;
+  status?: T;
+  phone?: T;
+  bookingDetails?:
+    | T
+    | {
+        date?: T;
+        slot?: T;
+        method?: T;
+      };
+  post?: T;
+  tenant?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -98,13 +98,11 @@ export function PropertiesClient({ initialPosts, primaryColor, tenantName }: { i
     setPriceRange([0, 100000000])
   }
 
-  const isMapView = view === 'map'
-
   const SearchBar = (
      <Box>
         <Grid gutter="xs" align="center">
             {/* 1. Keyword/Ref Search */}
-            <Grid.Col span={{ base: 12, lg: isMapView ? 6 : 2.5 }}>
+            <Grid.Col span={{ base: 12, sm: 6, lg: 2.5 }}>
                 <TextInput 
                     placeholder="Keyword or Ref No." 
                     leftSection={<IconSearch size={16} c="dimmed" />}
@@ -117,7 +115,7 @@ export function PropertiesClient({ initialPosts, primaryColor, tenantName }: { i
             </Grid.Col>
 
             {/* 2. Area Popover Checklist */}
-            <Grid.Col span={{ base: 12, lg: isMapView ? 6 : 2 }}>
+            <Grid.Col span={{ base: 12, sm: 6, lg: 2 }}>
                 <Popover width={300} position="bottom" withArrow shadow="md">
                     <Popover.Target>
                         <Button 
@@ -159,7 +157,7 @@ export function PropertiesClient({ initialPosts, primaryColor, tenantName }: { i
             </Grid.Col>
 
             {/* 3. Bedrooms Select */}
-            <Grid.Col span={{ base: 6, lg: isMapView ? 4 : 1.5 }}>
+            <Grid.Col span={{ base: 6, sm: 3, lg: 1.5 }}>
                 <Select 
                     placeholder="Beds"
                     data={['1', '2', '3', '4', '5']}
@@ -174,7 +172,7 @@ export function PropertiesClient({ initialPosts, primaryColor, tenantName }: { i
             </Grid.Col>
 
             {/* 4. Max Price Input */}
-            <Grid.Col span={{ base: 6, lg: isMapView ? 4 : 1.5 }}>
+            <Grid.Col span={{ base: 6, sm: 3, lg: 1.5 }}>
                 <NumberInput
                     placeholder="Max Price"
                     value={priceRange[1] >= 100000000 ? '' : priceRange[1]}
@@ -190,7 +188,7 @@ export function PropertiesClient({ initialPosts, primaryColor, tenantName }: { i
             </Grid.Col>
 
             {/* 5. Status Select */}
-            <Grid.Col span={{ base: 6, lg: isMapView ? 4 : 1.5 }}>
+            <Grid.Col span={{ base: 6, sm: 3, lg: 1.5 }}>
                 <Select 
                     placeholder="Status"
                     data={['For Rent', 'For Sale']}
@@ -205,7 +203,7 @@ export function PropertiesClient({ initialPosts, primaryColor, tenantName }: { i
             </Grid.Col>
 
             {/* 6. Action Group */}
-            <Grid.Col span={{ base: 12, lg: isMapView ? 12 : 3 }}>
+            <Grid.Col span={{ base: 12, lg: 3 }}>
                 <Group gap="xs" grow>
                     <Button 
                         variant={showFilters ? 'filled' : 'light'} 
@@ -260,80 +258,90 @@ export function PropertiesClient({ initialPosts, primaryColor, tenantName }: { i
     </Box>
   )
 
-  const SearchHeader = (
-    <Box mb={view === 'map' ? 0 : "xl"}>
-        <Stack gap="xs" mb="md">
-            <Group justify="space-between" align="center">
-                <Title order={1} size={rem(42)} fw={900}>
-                    {view === 'map' ? 'Map Search' : 'Explore Properties'}
-                </Title>
-                <SegmentedControl 
-                    value={view}
-                    onChange={(v: any) => {
-                        if (v === 'map' && selectedAreas.length === 0) return;
-                        setView(v)
-                    }}
-                    data={[
-                        { label: <Center><IconLayoutGrid size={16} /></Center>, value: 'grid' },
-                        { label: <Center><IconList size={16} /></Center>, value: 'list' },
-                        { label: <Center><IconMap2 size={16} /></Center>, value: 'map', disabled: selectedAreas.length === 0 },
-                    ]}
-                    radius="md"
-                    size="xs"
-                />
-            </Group>
-            {view !== 'map' && <Text size="lg" style={{ opacity: 0.8 }}>Discover exclusive real estate opportunities managed by {tenantName}.</Text>}
-        </Stack>
-        {SearchBar}
-        <Group justify="space-between" align="center" mt="md">
-            <Text fw={700} size="sm" c="dimmed">Showing {filteredPosts.length} Results</Text>
-            {filteredPosts.length > 0 && (
-                <Badge variant="light" color={primaryColor}>{propertyStatus || 'All Status'}</Badge>
-            )}
-        </Group>
-    </Box>
+  const StickyHeader = (
+      <Paper 
+          shadow="sm" 
+          p="md" 
+          radius={0}
+          style={{ 
+              position: 'sticky', 
+              top: '60px', // Height of the main StorefrontHeader
+              zIndex: 50,
+              backgroundColor: 'var(--mantine-color-body)',
+              borderBottom: '1px solid var(--mantine-color-default-border)',
+          }}
+      >
+          <Container fluid={view === 'map'} size="xl">
+            <Stack gap="xs" mb={view !== 'map' ? 'md' : 0}>
+                {view !== 'map' && (
+                    <>
+                        <Title order={1} size={rem(42)} fw={900} style={{ letterSpacing: -1 }}>
+                            Explore Properties
+                        </Title>
+                        <Text size="lg" style={{ opacity: 0.8 }}>Discover exclusive real estate opportunities managed by {tenantName}.</Text>
+                    </>
+                )}
+                {SearchBar}
+            </Stack>
+          </Container>
+      </Paper>
   )
 
-  // RENDER: Map View
-  if (view === 'map') {
-    return (
-        <MapSplitView posts={filteredPosts}>
-            {SearchHeader}
-        </MapSplitView>
-    )
-  }
-
-  // RENDER: Grid/List View
   return (
-    <Box mih="100vh" bg="var(--mantine-color-body)">
-      <Container size="xl" py={40}>
-        {SearchHeader}
-
-        {/* Results List/Grid */}
-        {filteredPosts.length > 0 ? (
-            view === 'grid' ? (
-                <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" verticalSpacing="xl">
-                    {filteredPosts.map(post => <RealEstateCard key={post.id} post={post} />)}
-                </SimpleGrid>
-            ) : (
-                <Stack gap="lg">
-                    {filteredPosts.map(post => <RealEstateListRow key={post.id} post={post} />)}
-                </Stack>
-            )
+    <Box>
+        {StickyHeader}
+        {view === 'map' ? (
+            <MapSplitView posts={filteredPosts} />
         ) : (
-            <Center py={100}>
-                <Stack align="center" gap="md">
-                    <ThemeIcon size={80} radius="xl" variant="light" color="gray">
-                        <IconX size={40} />
-                    </ThemeIcon>
-                    <Title order={3}>No Properties Found</Title>
-                    <Text c="dimmed">Try adjusting your filters or search keywords.</Text>
-                    <Button variant="subtle" onClick={resetFilters}>Clear All Filters</Button>
-                </Stack>
-            </Center>
-        )}
+            <Container size="xl" py={40}>
+                 <Group justify="space-between" mb="xl" align="center">
+                    <Group gap="sm">
+                        <Text fw={700} size="lg">Showing {filteredPosts.length} Results</Text>
+                        {filteredPosts.length > 0 && (
+                            <Badge variant="light" color={primaryColor}>{propertyStatus || 'All Status'}</Badge>
+                        )}
+                    </Group>
+                    <SegmentedControl 
+                        value={view}
+                        onChange={(v: any) => {
+                            if (v === 'map' && selectedAreas.length === 0) return;
+                            setView(v);
+                        }}
+                        data={[
+                            { label: <Center><IconLayoutGrid size={16} /></Center>, value: 'grid' },
+                            { label: <Center><IconList size={16} /></Center>, value: 'list' },
+                            { label: <Center><IconMap2 size={16} /></Center>, value: 'map', disabled: selectedAreas.length === 0 },
+                        ]}
+                        radius="md"
+                        size="xs"
+                    />
+                </Group>
 
-      </Container>
+                {/* Results List/Grid */}
+                {filteredPosts.length > 0 ? (
+                    view === 'grid' ? (
+                        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" verticalSpacing="xl">
+                            {filteredPosts.map(post => <RealEstateCard key={post.id} post={post} />)}
+                        </SimpleGrid>
+                    ) : (
+                        <Stack gap="lg">
+                            {filteredPosts.map(post => <RealEstateListRow key={post.id} post={post} />)}
+                        </Stack>
+                    )
+                ) : (
+                    <Center py={100}>
+                        <Stack align="center" gap="md">
+                            <ThemeIcon size={80} radius="xl" variant="light" color="gray">
+                                <IconX size={40} />
+                            </ThemeIcon>
+                            <Title order={3}>No Properties Found</Title>
+                            <Text c="dimmed">Try adjusting your filters or search keywords.</Text>
+                            <Button variant="subtle" onClick={resetFilters}>Clear All Filters</Button>
+                        </Stack>
+                    </Center>
+                )}
+            </Container>
+        )}
     </Box>
   )
 }

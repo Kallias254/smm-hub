@@ -1,7 +1,9 @@
 import React from 'react'
 import '@mantine/core/styles.css'
 import '@mantine/dates/styles.css'
+import '@mantine/notifications/styles.css'
 import { ColorSchemeScript, MantineProvider, Box } from '@mantine/core'
+import { Notifications } from '@mantine/notifications'
 import { theme } from './theme'
 import './styles.css'
 import { headers } from 'next/headers'
@@ -40,6 +42,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
       </head>
       <body>
         <MantineProvider theme={theme} defaultColorScheme="dark">
+            <Notifications />
             {tenant ? (
                 <Box mih="100vh" style={{ display: 'flex', flexDirection: 'column' }}>
                     <StorefrontHeader tenant={tenant as any} />

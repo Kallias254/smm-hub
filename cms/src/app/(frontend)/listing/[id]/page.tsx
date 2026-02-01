@@ -10,6 +10,7 @@ import { notFound } from 'next/navigation'
 import { MediaHero } from './MediaHero'
 import { PropertyGallery } from './PropertyGallery'
 import { MortgageCalculator } from './MortgageCalculator'
+import { BookingWidget } from './BookingWidget'
 import { StorefrontHeader } from '../../components/StorefrontHeader'
 import { StorefrontFooter } from '../../components/StorefrontFooter'
 
@@ -402,66 +403,48 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
 
             {/* RIGHT COLUMN (Sidebar) */}
             <Box w={{ base: '100%', md: 400 }} style={{ flexShrink: 0 }}>
-                <Stack gap="xl" pos={{ base: 'static', md: 'sticky' }} top={20}>
+                <Stack gap="xl" pos={{ base: 'static', md: 'sticky' }} top={80}>
                     
-                    {/* Schedule Widget */}
-                    <Paper p="lg" radius="md" withBorder shadow="md" style={{ backgroundColor: 'var(--mantine-color-body)' }}>
-                        <Title order={4} mb="md" fw={800} size="h4">Schedule a Tour</Title>
-                        <Stack gap="md">
-                            <SegmentedControl
-                                fullWidth
-                                data={[
-                                    { label: 'In-Person', value: 'in-person' },
-                                    { label: 'Video Chat', value: 'video' },
-                                ]}
-                            />
-                            
-                            <DatePickerInput
-                                leftSection={<IconCalendar size={18} stroke={1.5} />}
-                                placeholder="Select a Date"
+                    {/* Agent Snippet - Enhanced */}
+                    <Paper p="lg" radius="md" withBorder style={{ borderColor: 'var(--mantine-color-green-4)', backgroundColor: 'var(--mantine-color-green-0)' }}>
+                        <Stack gap="sm">
+                             <Group>
+                                <Avatar size="lg" radius="xl" color="green" variant="filled">
+                                    {(data.agentName || 'AG').split(' ').map((n: string) => n[0]).join('')}
+                                </Avatar>
+                                <Box style={{ flex: 1 }}>
+                                    <Text fw={800} size="md" c="green.9">{data.agentName || 'Listing Agent'}</Text>
+                                    <Text size="xs" c="green.8" fw={500}>Managed by {tenant?.name || 'Premier Properties'}</Text>
+                                </Box>
+                             </Group>
+                             
+                             <Button 
+                                component="a"
+                                href={`https://wa.me/${data.agentPhone || '254700000000'}?text=Inquiry about ${post.title}`}
+                                target="_blank"
+                                fullWidth 
+                                color="green" 
+                                leftSection={<IconBrandWhatsapp size={20} />}
                                 size="md"
-                            />
-                            
-                            <SimpleGrid cols={3}>
-                                <Button variant="light" color="blue" size="xs">10:00 AM</Button>
-                                <Button variant="filled" color="blue" size="xs">11:00 AM</Button>
-                                <Button variant="light" color="blue" size="xs">02:00 PM</Button>
-                            </SimpleGrid>
-
-                            <Button fullWidth color="blue" size="lg" mt="xs">Request Booking</Button>
-                            
-                            <Text size="xs" c="dimmed" ta="center">No credit card required. Free cancellation.</Text>
+                                radius="md"
+                            >
+                                Chat on WhatsApp
+                            </Button>
+                            <Text size="xs" c="dimmed" ta="center">Response time: Usually within 1 hour</Text>
                         </Stack>
                     </Paper>
+
+                    {/* Schedule Widget - Now Functional */}
+                    <BookingWidget 
+                        postId={post.id} 
+                        tenantId={tenant?.id || ''} 
+                        propertyTitle={post.title} 
+                    />
 
                     {/* Mortgage Calculator - Only for Sale */}
                     {isRealEstate && (data.propertyStatus?.toLowerCase().includes('sale') || data.salePrice) && (
                         <MortgageCalculator initialAmount={price} />
                     )}
-
-                    {/* Agent Snippet */}
-                    <Paper p="md" radius="md" withBorder style={{ backgroundColor: 'var(--mantine-color-default-hover)' }}>
-                         <Group>
-                            <Avatar size="md" radius="xl" color="blue" variant="filled">
-                                {(data.agentName || 'AG').split(' ').map((n: string) => n[0]).join('')}
-                            </Avatar>
-                            <Box style={{ flex: 1 }}>
-                                <Text fw={700} size="sm">{data.agentName || 'Listing Agent'}</Text>
-                                <Text size="xs" c="dimmed">Managed by {tenant?.name || 'Premier Properties'}</Text>
-                            </Box>
-                            <ActionIcon 
-                                variant="light" 
-                                color="green" 
-                                size="lg" 
-                                radius="md" 
-                                component="a" 
-                                href={`https://wa.me/${data.agentPhone || '254700000000'}?text=Inquiry about ${post.title}`}
-                                target="_blank"
-                            >
-                                <IconBrandWhatsapp size={20} />
-                            </ActionIcon>
-                         </Group>
-                    </Paper>
 
                 </Stack>
             </Box>
