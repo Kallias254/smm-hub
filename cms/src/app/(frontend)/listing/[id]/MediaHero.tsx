@@ -1,32 +1,63 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Box, Button, Group, Paper, Stack, Text, SegmentedControl, Center, rem } from '@mantine/core'
-import { Icon360, IconPhoto, IconMaximize } from '@tabler/icons-react'
+import { Box, Button, Group, Paper, Stack, Text, SegmentedControl, Center, rem, Loader } from '@mantine/core'
+import { Icon360, IconPhoto, IconMaximize, IconInfoCircle } from '@tabler/icons-react'
+import { Pannellum } from 'pannellum-react'
 
 export const MediaHero = ({ mediaUrl, tourUrl, title }: { mediaUrl: string; tourUrl?: string; title: string }) => {
   const [view, setView] = useState<'360' | 'image'>('360')
-  const active360Url = tourUrl || mediaUrl
+  const [loading, setLoading] = useState(true)
+  const active360Url = tourUrl || 'https://pannellum.org/images/alma.jpg' // High-quality fallback sample
 
   return (
-    <Box h={{ base: 350, sm: 450, md: 650 }} bg="gray.1" pos="relative">
-      <Box h="100%" w="100%" pos="relative" bg="dark.9" style={{ overflow: 'hidden' }}>
+    <Box h={{ base: 400, sm: 500, md: 700 }} bg="black" pos="relative" style={{ overflow: 'hidden' }}>
+      <Box h="100%" w="100%" pos="relative" bg="dark.9">
         {view === '360' ? (
-          <Box h="100%" w="100%" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${active360Url})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-             <Stack align="center" gap={{ base: 'sm', md: 'md' }} px="xl" style={{ width: '100%', maxWidth: 600 }}>
-                <Icon360 size="clamp(48px, 10vw, 80px)" color="white" style={{ opacity: 0.9 }} stroke={1.2} />
-                <Box ta="center">
-                    <Text c="white" fw={900} size="clamp(1.5rem, 5vw, 2.5rem)" style={{ letterSpacing: 2, lineHeight: 1.1, textShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-                        VIRTUAL TOUR READY
-                    </Text>
-                    <Text c="white" size="sm" fw={500} mt={8} opacity={0.8} visibleFrom="xs">
-                        Experience every detail in immersive 360°
-                    </Text>
-                </Box>
-                <Button variant="white" color="dark" radius="xl" size="md" px="xl" mt="md" shadow="xl">
-                    Enter 360° Experience
-                </Button>
-             </Stack>
+          <Box h="100%" w="100%" pos="relative">
+            {loading && (
+              <Center pos="absolute" inset={0} style={{ zIndex: 5, backgroundColor: 'rgba(0,0,0,0.8)' }}>
+                <Stack align="center" gap="sm">
+                  <Loader color="blue" size="xl" type="dots" />
+                  <Text c="white" fw={700} size="sm" tt="uppercase" lts={1}>Loading 360° Environment...</Text>
+                </Stack>
+              </Center>
+            )}
+            
+            <Pannellum
+                width="100%"
+                height="100%"
+                image={active360Url}
+                pitch={10}
+                yaw={180}
+                hfov={110}
+                autoLoad
+                onLoad={() => setLoading(false)}
+                showZoomCtrl={false}
+                showFullscreenCtrl={false}
+                mouseZoom={false}
+            >
+               <Pannellum.Hotspot
+                  type="info"
+                  pitch={11}
+                  yaw={-167}
+                  text="Main Living Area"
+                />
+            </Pannellum>
+
+            {/* Instruction Overlay (Fades out) */}
+            {!loading && (
+              <Group 
+                pos="absolute" 
+                top={20} 
+                left={20} 
+                style={{ zIndex: 5, pointerEvents: 'none' }}
+                gap="xs"
+              >
+                 <IconInfoCircle size={16} color="white" style={{ opacity: 0.6 }} />
+                 <Text c="white" size="xs" fw={700} style={{ opacity: 0.6 }}>DRAG TO EXPLORE</Text>
+              </Group>
+            )}
           </Box>
         ) : (
           <img 
@@ -50,20 +81,21 @@ export const MediaHero = ({ mediaUrl, tourUrl, title }: { mediaUrl: string; tour
                 value={view}
                 onChange={(val: any) => setView(val)}
                 radius="xl"
-                size="sm"
-                color="white"
-                bg="rgba(0,0,0,0.4)"
+                size="md"
+                color="blue"
+                bg="rgba(0,0,0,0.6)"
                 style={{ 
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    padding: rem(4)
+                    backdropFilter: 'blur(15px)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    padding: rem(4),
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
                 }}
                 data={[
                     { 
                         label: (
                             <Center style={{ gap: 8 }}>
-                                <Icon360 size={16} />
-                                <Text span fw={700} size="xs">360° VIEW</Text>
+                                <Icon360 size={20} />
+                                <Text span fw={800} size="sm">360° TOUR</Text>
                             </Center>
                         ), 
                         value: '360' 
@@ -71,8 +103,8 @@ export const MediaHero = ({ mediaUrl, tourUrl, title }: { mediaUrl: string; tour
                     { 
                         label: (
                             <Center style={{ gap: 8 }}>
-                                <IconPhoto size={16} />
-                                <Text span fw={700} size="xs">PHOTOS</Text>
+                                <IconPhoto size={20} />
+                                <Text span fw={800} size="sm">GALLERY</Text>
                             </Center>
                         ), 
                         value: 'image' 
@@ -89,8 +121,9 @@ export const MediaHero = ({ mediaUrl, tourUrl, title }: { mediaUrl: string; tour
                     color="dark" 
                     radius="md" 
                     size="sm"
+                    fw={800}
                 >
-                    All Photos
+                    View All Photos
                 </Button>
             </Box>
         )}

@@ -13,6 +13,7 @@ import { MortgageCalculator } from './MortgageCalculator'
 import { BookingWidget } from './BookingWidget'
 import { StorefrontHeader } from '../../components/StorefrontHeader'
 import { StorefrontFooter } from '../../components/StorefrontFooter'
+import { ReviewWidget } from '../../components/ReviewWidget'
 
 function FeatureStat({ icon: Icon, label, value }: any) {
     if (!value) return null
@@ -151,7 +152,20 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
   
   const primaryColor = (tenant as any)?.branding?.primaryColor || '#228be6'
 
-  // 2. Fetch Similar Listings
+  // 2. Fetch Positive Reviews for Social Proof
+  const reviewsRes = await payload.find({
+    collection: 'reviews',
+    where: {
+        and: [
+            { tenant: { equals: tenant?.id } },
+            { rating: { equals: 'positive' } }
+        ]
+    },
+    limit: 4,
+    sort: '-createdAt',
+  })
+
+  // 3. Fetch Similar Listings
   const similarListingsResult = await payload.find({
     collection: 'posts',
     where: {
@@ -167,7 +181,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
     limit: 4,
   })
 
-  // 3. Resolve Data & Assets
+  // 4. Resolve Data & Assets
   const contentBlock = post.content?.[0]
   const data = contentBlock?.data || {}
   const blockType = contentBlock?.blockType
@@ -183,7 +197,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
     'https://images.unsplash.com/photo-1558036117-15d82a90b9b1?auto=format&fit=crop&w=1600&q=80', // Patio/Garden
   ]
 
-  const SAMPLE_360 = 'https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=2600&auto=format&fit=crop' // Wide Interior
+  const SAMPLE_360 = 'https://pannellum.org/images/alma.jpg' // High-quality real equirectangular sample
 
   // Use Branded/Raw if available, otherwise fall back to Unsplash for that "Glory" look
   const mediaUrl = (post.assets?.brandedMedia as any)?.url || (post.assets?.rawMedia as any)?.url || SAMPLE_IMAGES[0]
@@ -374,17 +388,13 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
                     <Group justify="space-between" mb="xl">
                         <Group>
                             <IconMessageCircle size={28} />
-                            <Title order={3} size="h3" fw={800}>0 Reviews</Title>
+                            <Title order={3} size="h3" fw={800}>{reviewsRes.totalDocs} Reviews</Title>
                         </Group>
-                        <Select 
-                            placeholder="Sort by"
-                            data={['Default Order', 'Newest First', 'Highest Rating']}
-                            size="xs"
-                            variant="filled"
-                        />
                     </Group>
                     
-                    <Paper p="xl" radius="md" withBorder shadow="sm">
+                    <ReviewWidget reviews={reviewsRes.docs} />
+                    
+                    <Paper p="xl" radius="md" withBorder shadow="sm" mt="xl">
                         <Title order={4} mb="xl" fw={800}>Leave a Review</Title>
                         <SimpleGrid cols={{ base: 1, sm: 2 }} mb="md">
                             <TextInput label="Email" placeholder="you@example.com" required size="md" />

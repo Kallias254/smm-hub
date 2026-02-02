@@ -184,6 +184,13 @@ export const Tenants: CollectionConfig = {
       type: 'group',
       fields: [
         {
+          name: 'googleReviewLink',
+          type: 'text',
+          admin: {
+            description: 'Direct link to the Google Maps review form for this business.',
+          },
+        },
+        {
           name: 'postizApiKey',
           type: 'text',
           admin: {

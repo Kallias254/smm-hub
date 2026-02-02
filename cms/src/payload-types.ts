@@ -74,6 +74,7 @@ export interface Config {
     posts: Post;
     payments: Payment;
     leads: Lead;
+    reviews: Review;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -89,6 +90,7 @@ export interface Config {
     posts: PostsSelect<false> | PostsSelect<true>;
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
     leads: LeadsSelect<false> | LeadsSelect<true>;
+    reviews: ReviewsSelect<false> | ReviewsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -111,6 +113,7 @@ export interface Config {
       generateBrandedVideo: TaskGenerateBrandedVideo;
       publishToPostiz: TaskPublishToPostiz;
       notifyMobileApp: TaskNotifyMobileApp;
+      sendReviewRequest: TaskSendReviewRequest;
       inline: {
         input: unknown;
         output: unknown;
@@ -213,6 +216,10 @@ export interface Tenant {
     costMultiplier?: number | null;
   };
   integrations?: {
+    /**
+     * Direct link to the Google Maps review form for this business.
+     */
+    googleReviewLink?: string | null;
     /**
      * Automatically provisioned API Key for the dedicated Postiz Workspace
      */
@@ -426,7 +433,7 @@ export interface Payment {
    */
   phoneNumber: string;
   transactionId?: string | null;
-  checkoutRequestId: string;
+  checkoutRequestId?: string | null;
   status?: ('pending' | 'completed' | 'failed') | null;
   rawCallback?:
     | {
@@ -448,6 +455,7 @@ export interface Lead {
   id: number;
   type: 'booking' | 'whatsapp' | 'inquiry';
   status?: ('pending' | 'verified' | 'contacted' | 'closed') | null;
+  name?: string | null;
   phone: string;
   bookingDetails?: {
     date: string;
@@ -456,6 +464,28 @@ export interface Lead {
   };
   post?: (number | null) | Post;
   tenant: number | Tenant;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reviews".
+ */
+export interface Review {
+  id: number;
+  tenant: number | Tenant;
+  clientName: string;
+  /**
+   * Used to track who the review came from
+   */
+  clientPhone?: string | null;
+  rating: 'positive' | 'negative';
+  feedback?: string | null;
+  status?: ('received' | 'google_redirect' | 'escalated' | 'resolved') | null;
+  /**
+   * The link the user was sent to if they were a promoter
+   */
+  googleReviewLink?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -528,7 +558,13 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'generateBrandedImage' | 'generateBrandedVideo' | 'publishToPostiz' | 'notifyMobileApp';
+        taskSlug:
+          | 'inline'
+          | 'generateBrandedImage'
+          | 'generateBrandedVideo'
+          | 'publishToPostiz'
+          | 'notifyMobileApp'
+          | 'sendReviewRequest';
         taskID: string;
         input?:
           | {
@@ -562,7 +598,14 @@ export interface PayloadJob {
       }[]
     | null;
   taskSlug?:
-    | ('inline' | 'generateBrandedImage' | 'generateBrandedVideo' | 'publishToPostiz' | 'notifyMobileApp')
+    | (
+        | 'inline'
+        | 'generateBrandedImage'
+        | 'generateBrandedVideo'
+        | 'publishToPostiz'
+        | 'notifyMobileApp'
+        | 'sendReviewRequest'
+      )
     | null;
   queue?: string | null;
   waitUntil?: string | null;
@@ -604,6 +647,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'leads';
         value: number | Lead;
+      } | null)
+    | ({
+        relationTo: 'reviews';
+        value: number | Review;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -720,6 +767,7 @@ export interface TenantsSelect<T extends boolean = true> {
   integrations?:
     | T
     | {
+        googleReviewLink?: T;
         postizApiKey?: T;
         ingestionKey?: T;
       };
@@ -847,6 +895,7 @@ export interface PaymentsSelect<T extends boolean = true> {
 export interface LeadsSelect<T extends boolean = true> {
   type?: T;
   status?: T;
+  name?: T;
   phone?: T;
   bookingDetails?:
     | T
@@ -857,6 +906,21 @@ export interface LeadsSelect<T extends boolean = true> {
       };
   post?: T;
   tenant?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reviews_select".
+ */
+export interface ReviewsSelect<T extends boolean = true> {
+  tenant?: T;
+  clientName?: T;
+  clientPhone?: T;
+  rating?: T;
+  feedback?: T;
+  status?: T;
+  googleReviewLink?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -960,6 +1024,14 @@ export interface TaskPublishToPostiz {
  * via the `definition` "TaskNotifyMobileApp".
  */
 export interface TaskNotifyMobileApp {
+  input?: unknown;
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskSendReviewRequest".
+ */
+export interface TaskSendReviewRequest {
   input?: unknown;
   output?: unknown;
 }

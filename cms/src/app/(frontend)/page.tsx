@@ -9,6 +9,7 @@ import { StorefrontHeader } from './components/StorefrontHeader'
 import { StorefrontFooter } from './components/StorefrontFooter'
 import { CategorizedListings } from './storefront/components/CategorizedListings'
 import { SmartSearch } from './storefront/components/SmartSearch'
+import { TypebotWrapper } from './components/TypebotWrapper'
 import './styles.css'
 
 function AreaCard({ name, count, image, primaryColor }: { name: string; count: number; image: string; primaryColor: string }) {
@@ -75,71 +76,69 @@ export default async function HomePage() {
   const postsRes = await payload.find({ collection: 'posts', where: { tenant: { equals: tenant.id }, distributionStatus: { equals: 'published' } }, depth: 2, sort: '-updatedAt' })
   const primaryColor = (tenant as any).branding?.primaryColor || '#228be6'
 
+  // --- CONCIERGE HOMEPAGE ---
   return (
-    <Box mih="100vh" style={{ backgroundColor: 'var(--mantine-color-body)', color: 'var(--mantine-color-text)', overflowX: 'hidden' }}>
+    <div className="relative w-full h-screen overflow-hidden bg-black">
       
-      {/* Hero Section */}
-      <Box pos="relative" bg="var(--mantine-color-default-hover)" py={{ base: 60, md: 100 }} style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-        <Container size="xl">
-            <Stack align="center" gap="xl">
-                <Box ta="center" maw={900}>
-                    <Group justify="center" gap="xs" mb="md">
-                        <Badge variant="filled" color={primaryColor} size="lg" radius="sm" leftSection={<Icon360 size={14} />}>
-                            360° VIRTUAL TOURS
-                        </Badge>
-                        <Badge variant="outline" color="gray" size="lg" radius="sm" style={{ borderColor: 'var(--mantine-color-default-border)' }}>
-                            ZERO VIEWING FEES
-                        </Badge>
-                    </Group>
-                    <Title order={1} style={{ letterSpacing: -2, lineHeight: 1.1, fontSize: rem(64), fontWeight: 900 }}>
-                        House Hunt from Home.
-                    </Title>
-                    <Text size="xl" c="dimmed" mt="lg" fw={500} maw={600} mx="auto" lh={1.6}>
-                        Immerse yourself in every room before you ever step out the door.
-                    </Text>
-                </Box>
-                
-                <SmartSearch primaryColor={primaryColor} />
+      {/* 1. BACKGROUND VIDEO (Authority) */}
+      <video 
+        autoPlay 
+        muted 
+        loop 
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover opacity-60"
+      >
+        <source src="/branded_demo_video.mp4" type="video/mp4" />
+      </video>
 
-                <Box w="100%" mt={40}>
-                    <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="xl">
-                        <ReviewCard name="David Mwangi" text="Found my dream apartment in Westlands in just two days." rating={5} avatar="https://i.pravatar.cc/150?u=david" />
-                        <ReviewCard name="Sarah Chen" text="Professional service and very transparent pricing." rating={5} avatar="https://i.pravatar.cc/150?u=sarah" />
-                        <ReviewCard name="John Kibet" text="The best property agency in Nairobi." rating={5} avatar="https://i.pravatar.cc/150?u=john" />
-                    </SimpleGrid>
-                </Box>
-            </Stack>
-        </Container>
-      </Box>
+      {/* 2. OVERLAY GRADIENT */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent z-10" />
 
-      {/* Area Discovery */}
-      <Box py={80} style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-        <Container size="xl">
-            <Group justify="space-between" align="flex-end" mb={40}>
-                <Box><Title order={2} size={rem(32)} fw={900}>Find Your Home By Area</Title><Text c="dimmed" size="lg" mt="xs">Explore properties in Nairobi&apos;s most sought-after neighborhoods.</Text></Box>
-                <Button variant="subtle" color={primaryColor} rightSection={<IconArrowRight size={18} />}>View All Areas</Button>
-            </Group>
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="xl">
-                <AreaCard name="Karen" count={12} image="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80" primaryColor={primaryColor} />
-                <AreaCard name="Westlands" count={8} image="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=800&q=80" primaryColor={primaryColor} />
-                <AreaCard name="Lavington" count={5} image="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80" primaryColor={primaryColor} />
-                <AreaCard name="Kilimani" count={15} image="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80" primaryColor={primaryColor} />
-            </SimpleGrid>
-        </Container>
-      </Box>
+      {/* 3. CONCIERGE CARD (The Guide) */}
+      <div className="relative z-20 h-full flex items-center px-6 md:px-20">
+        <div className="w-full max-w-lg bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col h-[85vh]">
+          
+          {/* Card Header */}
+          <div className="p-8 pb-4">
+            <span 
+               className="inline-block px-3 py-1 rounded-full text-[10px] font-black tracking-widest text-white mb-4 uppercase"
+               style={{ backgroundColor: primaryColor }}
+            >
+              VIP CONCIERGE
+            </span>
+            <h1 className="text-4xl font-bold text-white tracking-tight mb-2">
+              Welcome to {(tenant as any).name || 'Agency'}
+            </h1>
+            <p className="text-gray-300 font-light leading-relaxed">
+              Don&apos;t waste time scrolling. Tell me your dream, and I&apos;ll find the keys.
+            </p>
+          </div>
 
-      {/* Categorized Collection */}
-      <Box py={80} bg="var(--mantine-color-default-hover)">
-        <Container size="xl">
-            <Group justify="space-between" align="flex-end" mb={60}>
-                <Box><Title order={2} style={{ letterSpacing: -1, fontSize: rem(36), fontWeight: 900 }}>Exclusive Property Collection</Title><Text size="lg" c="dimmed">Our hand-picked selection of the most premium real estate opportunities.</Text></Box>
-                <Button component={Link} href="/properties" variant="filled" color={primaryColor} size="md" radius="md" rightSection={<IconArrowRight size={18} />}>Explore All Properties</Button>
-            </Group>
-            <CategorizedListings posts={postsRes.docs} primaryColor={primaryColor} />
-        </Container>
-      </Box>
+          {/* Typebot Integration */}
+          <div className="flex-1 w-full relative">
+            <TypebotWrapper 
+              agencyName={(tenant as any).name || 'Agency'}
+              primaryColor={primaryColor}
+            />
+          </div>
+        </div>
+      </div>
 
-      {/* Footer */}
-    </Box>
+      {/* 4. FLOATING ESCAPE HATCH (Top Right) */}
+      <div className="absolute top-8 right-8 z-30 flex gap-4">
+         <Link 
+            href="/properties" 
+            className="px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold rounded-full hover:bg-white hover:text-black transition-all duration-300"
+         >
+            Browse Listings →
+         </Link>
+      </div>
+
+      {/* 5. BRANDING (Bottom Right) */}
+      <div className="absolute bottom-8 right-8 z-30 text-white/40 font-black text-6xl md:text-8xl select-none pointer-events-none uppercase tracking-tighter">
+        {(tenant as any).name || 'Hub'}
+      </div>
+
+    </div>
   )
 }

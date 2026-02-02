@@ -37,6 +37,11 @@ export const Leads: CollectionConfig = {
         }
     },
     {
+      name: 'name',
+      type: 'text',
+      label: 'Client Name',
+    },
+    {
       name: 'phone',
       type: 'text',
       required: true,
@@ -81,4 +86,22 @@ export const Leads: CollectionConfig = {
       index: true,
     },
   ],
+  hooks: {
+    afterChange: [
+      async ({ doc, previousDoc, req }) => {
+        // Trigger Review Request when status changes to 'closed'
+        if (doc.status === 'closed' && previousDoc?.status !== 'closed') {
+          await req.payload.jobs.queue({
+            task: 'sendReviewRequest',
+            input: {
+              clientName: doc.name || 'Valued Client',
+              clientPhone: doc.phone,
+              tenantId: typeof doc.tenant === 'object' ? doc.tenant.id : doc.tenant,
+            },
+          })
+          console.log(`[Lead Hook] Queued review request for ${doc.phone}`)
+        }
+      }
+    ]
+  }
 }
