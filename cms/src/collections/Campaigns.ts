@@ -13,9 +13,39 @@ export const Campaigns: CollectionConfig = {
   },
   access: {
     create: ({ req: { user } }) => !!user,
-    read: ({ req: { user } }) => {
+    read: ({ req }) => {
+      const { user, headers } = req
       if (!user) return false
+
+      // Get the active tenant from header
+      const activeTenantSubdomain = headers.get('x-tenant-subdomain')
+
+      // If header is present, filter by it (Admin impersonation or User context)
+      if (activeTenantSubdomain) {
+         // Admins can see any tenant they request
+         if (user.role === 'admin') {
+            return {
+                'tenant.subdomain': { equals: activeTenantSubdomain }
+            } as any
+         }
+         
+         // Regular users must belong to the tenant
+         if (user.tenants && user.tenants.length > 0) {
+            const tenantIds = user.tenants.map((t: any) => typeof t === 'object' ? t.id : t)
+            return {
+                and: [
+                    { tenant: { in: tenantIds } },
+                    { 'tenant.subdomain': { equals: activeTenantSubdomain } }
+                ]
+            } as any
+         }
+         return false
+      }
+
+      // Default Admin Access (Show All)
       if (user.role === 'admin') return true
+
+      // Default User Access (Show All Their Tenants)
       if (user.tenants && user.tenants.length > 0) {
         const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
         return {
