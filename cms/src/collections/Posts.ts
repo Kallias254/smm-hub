@@ -84,25 +84,19 @@ export const Posts: CollectionConfig = {
     afterChange: [
       async ({ doc, operation, req, previousDoc }) => {
         // 1. Creative Engine & Campaign Lifecycle Trigger
-        // Trigger if:
-        // A. New Media Added (needs branding)
-        // B. Status changed to 'Pending' (needs scheduling)
-        
         const isNewMedia = doc.assets?.rawMedia && !doc.assets?.brandedMedia
-        const isScheduleReady = doc.distributionStatus === 'pending' && previousDoc?.distributionStatus !== 'pending'
+        const isScheduleReady = doc.distributionStatus === 'queued' && previousDoc?.distributionStatus !== 'queued'
         
         if (isNewMedia || isScheduleReady) {
           const tenantId = typeof doc.tenant === 'object' ? doc.tenant.id : doc.tenant
           
           // --- Credit Logic (Only if generating new media) ---
           if (isNewMedia) {
-             // A. Fetch Tenant to check Credits
             const tenant = await req.payload.findByID({
                 collection: 'tenants',
                 id: tenantId,
             })
 
-            // B. Determine Cost based on Media Type
             const rawMediaId = typeof doc.assets.rawMedia === 'object' ? doc.assets.rawMedia.id : doc.assets.rawMedia
             const rawMedia = await req.payload.findByID({
                 collection: 'media',
@@ -111,19 +105,15 @@ export const Posts: CollectionConfig = {
             
             const isVideo = rawMedia.mimeType?.startsWith('video/')
             const baseCost = isVideo ? 5 : 1
-            
-            // Apply Service Tier Multiplier
             const multiplier = tenant.billing?.costMultiplier || 1
             const finalCost = baseCost * multiplier
-            
             const credits = tenant.billing?.credits || 0
 
             if (credits < finalCost) {
-                console.warn(`[CreativeEngine] Skipped generation for Tenant ${tenant.name}: Insufficient Credits (Has: ${credits}, Needs: ${finalCost}).`)
+                console.warn(`[CreativeEngine] Skipped generation: Insufficient Credits.`)
                 return
             }
 
-            // C. Deduct Credit (Optimistic)
             await req.payload.update({
                 collection: 'tenants',
                 id: tenantId,
@@ -133,39 +123,48 @@ export const Posts: CollectionConfig = {
                         credits: credits - finalCost,
                     }
                 },
-                req, // Pass request context to maintain auth/transaction
+                req,
             })
-            console.log(`[CreativeEngine] Deducted ${finalCost} credit(s) from ${tenant.name} (Base: ${baseCost}x${multiplier}). New Balance: ${credits - finalCost}`)
+            console.log(`[CreativeEngine] Deducted ${finalCost} credits.`)
           }
-          // --- End Credit Logic ---
 
-          // Extract Data from the first Content Block
+          // Extract Creative Data
           const activeBlock = doc.content?.[0]
           let creativeData = {}
-
           if (activeBlock && activeBlock.data) {
-             creativeData = {
-               template: activeBlock.blockType,
-               ...activeBlock.data as object
-             }
+             creativeData = { template: activeBlock.blockType, ...activeBlock.data as object }
           }
 
           try {
             const temporal = await getTemporalClient()
-            const handle = await temporal.workflow.start('CampaignWorkflow', {
-                taskQueue: 'branding-queue',
-                workflowId: `campaign-${doc.id}-${Date.now()}`, // Unique ID per run
-                args: [{
-                    postId: doc.id,
-                    tenantId: String(tenantId),
-                    scheduledAt: doc.scheduledAt,
-                    requiresApproval: true, // Defaulting to true for now
-                    data: creativeData,
-                }],
-            })
-            console.log(`[Temporal] Started Campaign Workflow: ${handle.workflowId}`)
+            const workflowId = `campaign-post-${doc.id}`
+
+            if (isScheduleReady) {
+               // A. Signal existing workflow to resume (Approval Received)
+               try {
+                 const handle = temporal.workflow.getHandle(workflowId)
+                 await handle.signal('approvePost')
+                 console.log(`[Temporal] Sent 'approvePost' signal to ${workflowId}`)
+               } catch (e) {
+                 console.warn(`[Temporal] Failed to signal workflow:`, e)
+               }
+            } else {
+               // B. Start new workflow (Generation Phase)
+               const handle = await temporal.workflow.start('CampaignWorkflow', {
+                   taskQueue: 'branding-queue',
+                   workflowId: workflowId,
+                   args: [{
+                       postId: doc.id,
+                       tenantId: String(tenantId),
+                       scheduledAt: doc.scheduledAt,
+                       requiresApproval: true,
+                       data: creativeData,
+                   }],
+               })
+               console.log(`[Temporal] Started Campaign Workflow: ${handle.workflowId}`)
+            }
           } catch (e) {
-            console.error('[Temporal] Failed to start workflow:', e)
+            console.error('[Temporal] Workflow Error:', e)
           }
         }
       },
@@ -202,7 +201,6 @@ export const Posts: CollectionConfig = {
       hooks: {
         beforeValidate: [
           ({ req, value }) => {
-            // Auto-assign tenant for non-admins. Use the first tenant if multiple exist.
             if (req.user && req.user.role !== 'admin' && req.user.tenants && req.user.tenants.length > 0) {
               const firstTenant = req.user.tenants[0]
               const myTenantId = typeof firstTenant === 'object' ? firstTenant.id : firstTenant
@@ -296,8 +294,8 @@ export const Posts: CollectionConfig = {
       options: [
         { label: 'Pending Approval', value: 'pending' },
         { label: 'Queued', value: 'queued' },
-        { label: 'Published', value: 'published' }, // For one-offs
-        { label: 'Recurring (Active)', value: 'recurring' }, // Visual helper
+        { label: 'Published', value: 'published' }, 
+        { label: 'Recurring (Active)', value: 'recurring' }, 
         { label: 'Failed', value: 'failed' },
       ],
       admin: {

@@ -76,67 +76,102 @@ export default async function HomePage() {
   const postsRes = await payload.find({ collection: 'posts', where: { tenant: { equals: tenant.id }, distributionStatus: { equals: 'published' } }, depth: 2, sort: '-updatedAt' })
   const primaryColor = (tenant as any).branding?.primaryColor || '#228be6'
 
-  // --- CONCIERGE HOMEPAGE ---
+// --- CONCIERGE HOMEPAGE ---
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-black">
+    <div className="relative w-full h-screen overflow-hidden bg-[#050505] font-sans selection:bg-gold selection:text-black">
       
-      {/* 1. BACKGROUND VIDEO (Authority) */}
-      <video 
-        autoPlay 
-        muted 
-        loop 
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover opacity-60"
-      >
-        <source src="/branded_demo_video.mp4" type="video/mp4" />
-      </video>
+      {/* 0. GOOGLE FONTS INJECTION */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@100..900&display=swap');
+        .font-serif { font-family: 'Playfair Display', serif; }
+        .glass-reflection {
+          background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 100%);
+        }
+      `}} />
 
-      {/* 2. OVERLAY GRADIENT */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent z-10" />
+      {/* 1. BACKGROUND VIDEO (Authority) */}
+      <div className="absolute inset-0 z-0">
+        <video 
+          autoPlay 
+          muted 
+          loop 
+          playsInline
+          className="w-full h-full object-cover scale-105 contrast-[1.1] brightness-[0.7]"
+        >
+          <source src="/branded_demo_video.mp4" type="video/mp4" />
+        </video>
+        {/* Film Grain Overlay */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      </div>
+
+      {/* 2. MASTER OVERLAY (The "Vibe" Layer) */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-black via-black/40 to-transparent z-10" />
 
       {/* 3. CONCIERGE CARD (The Guide) */}
-      <div className="relative z-20 h-full flex items-center px-6 md:px-20">
-        <div className="w-full max-w-lg bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col h-[85vh]">
+      <div className="relative z-20 h-full flex items-center px-6 md:px-32">
+        <div className="w-full max-w-xl bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col h-[85vh] transition-all duration-700 hover:border-white/20">
           
+          {/* Decorative Glass Reflection */}
+          <div className="absolute inset-0 glass-reflection pointer-events-none" />
+
           {/* Card Header */}
-          <div className="p-8 pb-4">
-            <span 
-               className="inline-block px-3 py-1 rounded-full text-[10px] font-black tracking-widest text-white mb-4 uppercase"
-               style={{ backgroundColor: primaryColor }}
-            >
-              VIP CONCIERGE
-            </span>
-            <h1 className="text-4xl font-bold text-white tracking-tight mb-2">
-              Welcome to {(tenant as any).name || 'Agency'}
+          <div className="p-10 pb-6 relative z-10">
+            <div className="flex items-center gap-4 mb-6">
+                <span 
+                className="px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.3em] text-white uppercase border border-white/10 backdrop-blur-md"
+                style={{ backgroundColor: `${primaryColor}CC` }}
+                >
+                VIP CONCIERGE
+                </span>
+                <div className="h-[1px] flex-1 bg-gradient-to-r from-white/20 to-transparent" />
+            </div>
+            
+            <h1 className="text-5xl md:text-6xl font-serif text-white leading-[1.1] mb-4 italic">
+              Experience {(tenant as any).name || 'Excellence'}
             </h1>
-            <p className="text-gray-300 font-light leading-relaxed">
-              Don&apos;t waste time scrolling. Tell me your dream, and I&apos;ll find the keys.
+            <p className="text-zinc-400 font-light text-lg leading-relaxed max-w-sm tracking-wide">
+              Bespoke property guidance. Tell us your vision, and we will handle the rest.
             </p>
           </div>
 
           {/* Typebot Integration */}
-          <div className="flex-1 w-full relative">
-            <TypebotWrapper 
-              agencyName={(tenant as any).name || 'Agency'}
-              primaryColor={primaryColor}
-            />
+          <div className="flex-1 w-full relative z-10 px-4 pb-4">
+            <div className="w-full h-full rounded-[1.5rem] overflow-hidden bg-black/20 border border-white/5">
+                <TypebotWrapper 
+                agencyName={(tenant as any).name || 'Agency'}
+                primaryColor={primaryColor}
+                />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 4. FLOATING ESCAPE HATCH (Top Right) */}
-      <div className="absolute top-8 right-8 z-30 flex gap-4">
+      {/* 4. NAVIGATION (Top Right) */}
+      <div className="absolute top-10 right-10 z-30 flex gap-6 items-center">
          <Link 
             href="/properties" 
-            className="px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold rounded-full hover:bg-white hover:text-black transition-all duration-300"
+            className="text-[11px] font-bold text-white/50 tracking-[0.2em] uppercase hover:text-white transition-colors border-b border-white/10 pb-1"
          >
-            Browse Listings →
+            Browse Collection
+         </Link>
+         <Link 
+            href="/admin" 
+            className="p-3 bg-white text-black rounded-full hover:scale-110 transition-transform shadow-xl"
+         >
+            <IconRocket size={20} />
          </Link>
       </div>
 
-      {/* 5. BRANDING (Bottom Right) */}
-      <div className="absolute bottom-8 right-8 z-30 text-white/40 font-black text-6xl md:text-8xl select-none pointer-events-none uppercase tracking-tighter">
-        {(tenant as any).name || 'Hub'}
+      {/* 5. BRANDING WATERMARK (Bottom Right) */}
+      <div className="absolute bottom-12 right-12 z-30 pointer-events-none">
+        <div className="flex flex-col items-end">
+            <span className="text-white/10 font-serif text-8xl md:text-[12rem] leading-none select-none uppercase italic">
+                {(tenant as any).name?.split(' ')[0] || 'Hub'}
+            </span>
+            <span className="text-white/20 text-[10px] font-black tracking-[0.5em] uppercase mt-[-20px] pr-4">
+                ESTABLISHED 2026
+            </span>
+        </div>
       </div>
 
     </div>

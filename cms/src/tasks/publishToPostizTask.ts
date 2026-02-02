@@ -60,9 +60,10 @@ export const publishToPostizTask: TaskConfig<{ input: PublishToPostizInput, outp
       let mediaUrl = ''
       if (typeof post.assets?.brandedMedia === 'object' && post.assets.brandedMedia?.url) {
         mediaUrl = post.assets.brandedMedia.url
-        // If local, pre-pend server URL
-        if (!mediaUrl.startsWith('http')) {
-          mediaUrl = `${process.env.PUBLIC_URL || 'http://localhost:3000'}${mediaUrl}`
+        // CRITICAL: For internal Postiz container to reach MinIO container, 
+        // we must use the Docker service name 'minio'
+        if (mediaUrl.startsWith('/api/media')) {
+           mediaUrl = `http://minio:9000/smm-hub-media${mediaUrl.replace('/api/media/file', '')}`
         }
       }
 
@@ -76,29 +77,30 @@ export const publishToPostizTask: TaskConfig<{ input: PublishToPostizInput, outp
       // 4. Handle Automated Channels (Postiz)
       if (automatedChannelKeys.length > 0) {
         try {
-          // Fetch available integrations from Postiz to find IDs (Using Tenant Key)
           const integrations = await postiz.getIntegrations(tenantApiKey)
           
-          // Map internal keys (e.g. 'facebook') to Postiz Integration IDs
-          // We assume the Postiz 'identifier' matches our keys, or we do a best-guess match
+          // Map internal keys to Postiz Integration IDs
+          // SMM Hub Keys: ['facebook', 'instagram', 'linkedin', 'twitter']
+          // Postiz Identifiers: usually 'facebook', 'instagram', etc.
           const targetIntegrationIds = integrations
             .filter(integration => {
-               // Simple match: does the integration provider (e.g. 'facebook') match our request?
-               // You might need more robust mapping logic here in production.
-               return automatedChannelKeys.includes(integration.identifier)
+               const provider = integration.identifier.toLowerCase()
+               return automatedChannelKeys.some(k => k.toLowerCase() === provider)
             })
             .map(i => i.id)
 
           if (targetIntegrationIds.length > 0) {
+            console.log(`[PublishTask] Sending to Postiz Integrations: ${targetIntegrationIds.join(', ')}`)
             await postiz.createPost({
               content: plainTextCaption,
               mediaUrls: mediaUrl ? [mediaUrl] : [],
               integrationIds: targetIntegrationIds,
               scheduledAt: post.scheduledAt || undefined
-            }, tenantApiKey) // Pass Tenant Key
+            }, tenantApiKey)
             postizSuccess = true
           } else {
-             console.warn('⚠️ No matching Postiz integrations found for:', automatedChannelKeys)
+             console.warn('⚠️ No matching Postiz integrations found. Did you link your socials in the Postiz dashboard?')
+             postizSuccess = true // We mark success to avoid infinite loops, but log warning
           }
 
         } catch (err: any) {

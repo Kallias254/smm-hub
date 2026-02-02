@@ -32,6 +32,8 @@ export const MediaHero = ({ mediaUrl, tourUrl, title }: { mediaUrl: string; tour
                 yaw={180}
                 hfov={110}
                 autoLoad
+                autoRotate={-2} // Slow subtle rotation
+                autoRotateInactivityDelay={3000} // Resume rotation after 3s of no movement
                 onLoad={() => setLoading(false)}
                 showZoomCtrl={false}
                 showFullscreenCtrl={false}

@@ -8,8 +8,7 @@ export function middleware(request: NextRequest) {
   // Define protected or global subdomains
   const protectedSubdomains = ['admin', 'www', 'api', 'dev', 'postiz', 'mail', 'system']
 
-  // Extract subdomain (e.g., nebula.smmhub.localhost -> nebula)
-  // This handles both smmhub.localhost and tenant.smmhub.localhost
+  // Extract subdomain from hostname (e.g., nebula.smmhub.localhost -> nebula)
   const hostnameParts = hostname.split('.')
   let subdomain = ''
 
@@ -17,14 +16,18 @@ export function middleware(request: NextRequest) {
     subdomain = hostnameParts[0].toLowerCase()
   }
 
-  // If no subdomain or it's a protected one, proceed normally
-  if (!subdomain || protectedSubdomains.includes(subdomain)) {
+  // Allow explicit header override (useful for Mobile Apps or API testing)
+  const explicitTenant = request.headers.get('x-tenant-subdomain')
+  const finalSubdomain = subdomain || explicitTenant
+
+  // If no subdomain and no explicit header, or it's a protected one, proceed normally
+  if (!finalSubdomain || protectedSubdomains.includes(finalSubdomain)) {
     return NextResponse.next()
   }
 
   // Inject the tenant subdomain into headers so Payload can access it
   const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('X-Tenant-Subdomain', subdomain)
+  requestHeaders.set('X-Tenant-Subdomain', finalSubdomain)
 
   return NextResponse.next({
     request: {
