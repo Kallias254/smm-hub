@@ -11,21 +11,7 @@ export const Tenants: CollectionConfig = {
     afterChange: [createPostizWorkspace],
   },
   access: {
-    read: ({ req: { user } }) => {
-      if (!user) return false
-      if (user.role === 'admin') return true
-      
-      // Users can only see their own tenants
-      if (user.tenants && user.tenants.length > 0) {
-        const tenantIds = user.tenants.map(t => typeof t === 'object' ? t.id : t)
-        return {
-          id: {
-            in: tenantIds,
-          },
-        }
-      }
-      return false
-    },
+    read: () => true, // Allow public to see tenant name/branding for storefronts
     create: ({ req: { user } }) => user?.role === 'admin',
     update: ({ req: { user } }) => {
       if (!user) return false
@@ -106,6 +92,9 @@ export const Tenants: CollectionConfig = {
     {
       name: 'billing',
       type: 'group',
+      access: {
+        read: ({ req: { user } }) => Boolean(user), // Hide from public
+      },
       fields: [
         {
           name: 'plan',
@@ -182,6 +171,9 @@ export const Tenants: CollectionConfig = {
     {
       name: 'integrations',
       type: 'group',
+      access: {
+        read: ({ req: { user } }) => true, // Need googleReviewLink to be public!
+      },
       fields: [
         {
           name: 'googleReviewLink',
@@ -193,6 +185,9 @@ export const Tenants: CollectionConfig = {
         {
           name: 'postizApiKey',
           type: 'text',
+          access: {
+            read: ({ req: { user } }) => Boolean(user), // Sensitive
+          },
           admin: {
             readOnly: true,
             description: 'Automatically provisioned API Key for the dedicated Postiz Workspace',
@@ -201,6 +196,9 @@ export const Tenants: CollectionConfig = {
         {
           name: 'ingestionKey',
           type: 'text',
+          access: {
+            read: ({ req: { user } }) => Boolean(user), // Sensitive
+          },
           admin: {
             description: 'Secret Key for external apps to push data to SMM Hub',
           },
