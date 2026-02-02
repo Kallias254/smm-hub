@@ -41,6 +41,28 @@ services:
       - postiz-network
       - temporal-network
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/home/node/app
+      - node_modules:/home/node/app/node_modules
+    working_dir: /home/node/app/
+    command: pnpm worker
+    depends_on:
+      - payload
+      - temporal
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgres://payload:payload@postgres:5432/payload
+      - TEMPORAL_ADDRESS=temporal:7233
+      - S3_ENDPOINT=http://minio:9000
+    networks:
+      - postiz-network
+      - temporal-network
+
   postgres:
     image: postgres:15-alpine
     restart: always

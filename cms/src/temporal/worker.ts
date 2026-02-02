@@ -1,4 +1,4 @@
-import { Worker } from '@temporalio/worker';
+import { Worker, NativeConnection } from '@temporalio/worker';
 import * as mediaActivities from './activities/media.ts';
 import * as campaignActivities from './activities/campaign.ts';
 import * as paymentActivities from './activities/payments.ts';
@@ -15,8 +15,10 @@ async function run() {
   const payload = await getPayload({ config });
   setGlobalPayload(payload);
   
+  const temporalAddress = process.env.TEMPORAL_ADDRESS || 'localhost:7233';
   console.log('--- Temporal Worker Starting ---');
   console.log('Namespace: smm-hub-core');
+  console.log('Address:', temporalAddress);
 
   const activities = {
     ...mediaActivities,
@@ -24,10 +26,15 @@ async function run() {
     ...paymentActivities,
   };
 
+  const connection = await NativeConnection.connect({
+    address: temporalAddress,
+  });
+
   const worker = await Worker.create({
-    workflowsPath: path.resolve(__dirname, './workflows'),
+    connection,
+    workflowsPath: path.resolve(__dirname, './workflows/index.ts'),
     activities,
-    taskQueue: 'branding-queue', // We will use this shared queue for now
+    taskQueue: 'branding-queue', 
     namespace: 'smm-hub-core',
   });
 

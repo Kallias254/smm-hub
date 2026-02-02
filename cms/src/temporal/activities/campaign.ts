@@ -12,15 +12,18 @@ export async function checkApprovalStatusActivity(postId: string): Promise<strin
 export async function publishPostActivity(postId: string): Promise<string> {
   const payload = getGlobalPayload();
   
-  // We re-use the existing Task logic by manually queuing it 
-  // OR we can call the logic directly. 
-  // Calling the queue is safer as it uses the existing Task infrastructure.
-  
+  // 1. Fetch post to get requested channels
+  const post = await payload.findByID({
+    collection: 'posts',
+    id: postId,
+  });
+
+  // 2. Trigger the real publishing task
   await payload.jobs.queue({
     task: 'publishToPostiz',
     input: {
       postId: postId,
-      channels: [], // The task will fetch channels from the post doc
+      channels: (post.channels as string[]) || [], 
     },
   });
 
