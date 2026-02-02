@@ -1,5 +1,6 @@
 import { CollectionConfig } from 'payload'
 import { RealEstateListing, SportsFixture, RetailProduct, ServicePackage } from '../blocks/CreativeBlocks'
+import { getTemporalClient } from '../temporal/client'
 
 export const Posts: CollectionConfig = {
   slug: 'posts',
@@ -52,53 +53,61 @@ export const Posts: CollectionConfig = {
   hooks: {
     afterChange: [
       async ({ doc, operation, req, previousDoc }) => {
-        // 1. Creative Engine Trigger (New Raw Media)
-        if (doc.assets?.rawMedia && !doc.assets?.brandedMedia) {
+        // 1. Creative Engine & Campaign Lifecycle Trigger
+        // Trigger if:
+        // A. New Media Added (needs branding)
+        // B. Status changed to 'Pending' (needs scheduling)
+        
+        const isNewMedia = doc.assets?.rawMedia && !doc.assets?.brandedMedia
+        const isScheduleReady = doc.distributionStatus === 'pending' && previousDoc?.distributionStatus !== 'pending'
+        
+        if (isNewMedia || isScheduleReady) {
           const tenantId = typeof doc.tenant === 'object' ? doc.tenant.id : doc.tenant
           
-          // A. Fetch Tenant to check Credits
-          const tenant = await req.payload.findByID({
-            collection: 'tenants',
-            id: tenantId,
-          })
+          // --- Credit Logic (Only if generating new media) ---
+          if (isNewMedia) {
+             // A. Fetch Tenant to check Credits
+            const tenant = await req.payload.findByID({
+                collection: 'tenants',
+                id: tenantId,
+            })
 
-          // B. Determine Cost based on Media Type
-          const rawMediaId = typeof doc.assets.rawMedia === 'object' ? doc.assets.rawMedia.id : doc.assets.rawMedia
-          const rawMedia = await req.payload.findByID({
-            collection: 'media',
-            id: rawMediaId,
-          })
-          
-          const isVideo = rawMedia.mimeType?.startsWith('video/')
-          const baseCost = isVideo ? 5 : 1
-          
-          // Apply Service Tier Multiplier
-          const multiplier = tenant.billing?.costMultiplier || 1
-          const finalCost = baseCost * multiplier
-          
-          const credits = tenant.billing?.credits || 0
+            // B. Determine Cost based on Media Type
+            const rawMediaId = typeof doc.assets.rawMedia === 'object' ? doc.assets.rawMedia.id : doc.assets.rawMedia
+            const rawMedia = await req.payload.findByID({
+                collection: 'media',
+                id: rawMediaId,
+            })
+            
+            const isVideo = rawMedia.mimeType?.startsWith('video/')
+            const baseCost = isVideo ? 5 : 1
+            
+            // Apply Service Tier Multiplier
+            const multiplier = tenant.billing?.costMultiplier || 1
+            const finalCost = baseCost * multiplier
+            
+            const credits = tenant.billing?.credits || 0
 
-          if (credits < finalCost) {
-             console.warn(`[CreativeEngine] Skipped generation for Tenant ${tenant.name}: Insufficient Credits (Has: ${credits}, Needs: ${finalCost}).`)
-             return
+            if (credits < finalCost) {
+                console.warn(`[CreativeEngine] Skipped generation for Tenant ${tenant.name}: Insufficient Credits (Has: ${credits}, Needs: ${finalCost}).`)
+                return
+            }
+
+            // C. Deduct Credit (Optimistic)
+            await req.payload.update({
+                collection: 'tenants',
+                id: tenantId,
+                data: {
+                    billing: {
+                        ...tenant.billing,
+                        credits: credits - finalCost,
+                    }
+                },
+                req, // Pass request context to maintain auth/transaction
+            })
+            console.log(`[CreativeEngine] Deducted ${finalCost} credit(s) from ${tenant.name} (Base: ${baseCost}x${multiplier}). New Balance: ${credits - finalCost}`)
           }
-
-          // C. Deduct Credit (Optimistic)
-          await req.payload.update({
-             collection: 'tenants',
-             id: tenantId,
-             data: {
-                billing: {
-                    ...tenant.billing,
-                    credits: credits - finalCost,
-                }
-             },
-             req, // Pass request context to maintain auth/transaction
-          })
-          console.log(`[CreativeEngine] Deducted ${finalCost} credit(s) from ${tenant.name} (Base: ${baseCost}x${multiplier}). New Balance: ${credits - finalCost}`)
-
-          // D. Proceed with Generation
-          const taskSlug = isVideo ? 'generateBrandedVideo' : 'generateBrandedImage'
+          // --- End Credit Logic ---
 
           // Extract Data from the first Content Block
           const activeBlock = doc.content?.[0]
@@ -111,30 +120,23 @@ export const Posts: CollectionConfig = {
              }
           }
 
-          await req.payload.jobs.queue({
-            task: taskSlug,
-            input: {
-              postId: doc.id,
-              mediaId: doc.assets.rawMedia,
-              tenantId: doc.tenant,
-              data: creativeData,
-            },
-          })
-        }
-
-        // 2. Distribution Trigger
-        if (
-          doc.distributionStatus === 'queued' && 
-          previousDoc?.distributionStatus !== 'queued' &&
-          (doc.assets?.brandedMedia || (typeof doc.assets?.brandedMedia === 'object' && doc.assets.brandedMedia !== null))
-        ) {
-          await req.payload.jobs.queue({
-            task: 'publishToPostiz',
-            input: {
-              postId: doc.id,
-              channels: doc.channels || [],
-            },
-          })
+          try {
+            const temporal = await getTemporalClient()
+            const handle = await temporal.workflow.start('CampaignWorkflow', {
+                taskQueue: 'branding-queue',
+                workflowId: `campaign-${doc.id}-${Date.now()}`, // Unique ID per run
+                args: [{
+                    postId: doc.id,
+                    tenantId: String(tenantId),
+                    scheduledAt: doc.scheduledAt,
+                    requiresApproval: true, // Defaulting to true for now
+                    data: creativeData,
+                }],
+            })
+            console.log(`[Temporal] Started Campaign Workflow: ${handle.workflowId}`)
+          } catch (e) {
+            console.error('[Temporal] Failed to start workflow:', e)
+          }
         }
       },
     ],

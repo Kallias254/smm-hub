@@ -1,5 +1,6 @@
 import { Worker } from '@temporalio/worker';
-import * as activities from './activities/media.ts'; // Add extension for ESM
+import * as mediaActivities from './activities/media.ts';
+import * as campaignActivities from './activities/campaign.ts';
 import { getPayload } from 'payload';
 import { setGlobalPayload } from './payload-client.ts';
 import config from '../payload.config.ts';
@@ -16,10 +17,15 @@ async function run() {
   console.log('--- Temporal Worker Starting ---');
   console.log('Namespace: smm-hub-core');
 
+  const activities = {
+    ...mediaActivities,
+    ...campaignActivities,
+  };
+
   const worker = await Worker.create({
-    workflowsPath: path.resolve(__dirname, './workflows/branding.ts'),
+    workflowsPath: path.resolve(__dirname, './workflows'),
     activities,
-    taskQueue: 'branding-queue',
+    taskQueue: 'branding-queue', // We will use this shared queue for now
     namespace: 'smm-hub-core',
   });
 
