@@ -94,6 +94,48 @@ export class DarajaClient {
 
     return data
   }
+
+  async queryTransactionStatus(checkoutRequestId: string) {
+    if (!this.consumerKey) {
+       console.log('⚠️ Mocking STK Query (No Credentials)')
+       return {
+         ResultCode: "0",
+         ResultDesc: "The service request is processed successfully.",
+         ResponseDescription: "The service request is processed successfully.",
+         ResponseCode: "0",
+         MerchantRequestID: "mock-merchant-id",
+         CheckoutRequestID: checkoutRequestId,
+       }
+    }
+
+    const token = await this.getAccessToken()
+    
+    // Timestamp format: YYYYMMDDHHmmss
+    const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)
+    const password = Buffer.from(`${this.shortcode}${this.passkey}${timestamp}`).toString('base64')
+
+    const payload = {
+      BusinessShortCode: this.shortcode,
+      Password: password,
+      Timestamp: timestamp,
+      CheckoutRequestID: checkoutRequestId,
+    }
+
+    const response = await fetch(`${this.baseUrl}/mpesa/stkpushquery/v1/query`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await response.json()
+    
+    // Note: Daraja Query returns an error object if the transaction is pending/not found
+    // We handle that in the activity
+    return data
+  }
 }
 
 export const daraja = new DarajaClient()

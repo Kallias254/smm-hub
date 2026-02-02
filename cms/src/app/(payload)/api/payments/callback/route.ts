@@ -1,6 +1,7 @@
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import { NextResponse } from 'next/server'
+import { getTemporalClient } from '../../../../../temporal/client'
 
 export const POST = async (req: Request) => {
   const payload = await getPayload({ config: configPromise })
@@ -10,10 +11,9 @@ export const POST = async (req: Request) => {
     console.log('🔔 M-PESA Callback Received:', JSON.stringify(data, null, 2))
 
     const callback = data.Body.stkCallback
-    const resultCode = callback.ResultCode
     const checkoutRequestId = callback.CheckoutRequestID
 
-    // 1. Find the Payment Record
+    // 1. Find the Payment Record to get the ID (which is part of the Workflow ID)
     const payments = await payload.find({
       collection: 'payments',
       where: {
@@ -27,36 +27,18 @@ export const POST = async (req: Request) => {
     }
 
     const payment = payments.docs[0]
-    
-    // 2. Determine Status
-    let status: 'completed' | 'failed' = 'failed'
-    let transactionId = ''
+    const workflowId = `payment-${payment.id}`
 
-    if (resultCode === 0) {
-      status = 'completed'
-      // Extract Receipt Number
-      const meta = callback.CallbackMetadata?.Item || []
-      const receiptItem = meta.find((item: any) => item.Name === 'MpesaReceiptNumber')
-      if (receiptItem) {
-        transactionId = receiptItem.Value
-      }
-    }
-
-    // 4. Update Payment Status (The Collection Hook will handle Credit addition)
-    await payload.update({
-        collection: 'payments',
-        id: payment.id,
-        data: {
-            status: status,
-            transactionId: transactionId,
-            rawCallback: callback,
-        }
-    })
-
-    if (status === 'completed') {
-        console.log(`✅ Payment verified: ${transactionId}`)
-    } else {
-        console.log(`❌ Payment failed or cancelled.`)
+    // 2. Signal the Temporal Workflow
+    try {
+        const temporal = await getTemporalClient()
+        const handle = temporal.workflow.getHandle(workflowId)
+        
+        await handle.signal('paymentCallback', data)
+        console.log(`✅ Signaled Workflow ${workflowId} with callback data.`)
+    } catch (err: any) {
+        console.warn(`⚠️ Failed to signal workflow ${workflowId} (might be closed or not found):`, err.message)
+        // We do NOT fail the webhook response, as we might have processed it manually via query
     }
 
     return NextResponse.json({ received: true })

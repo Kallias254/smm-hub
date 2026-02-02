@@ -111,7 +111,7 @@ export const Payments: CollectionConfig = {
       name: 'checkoutRequestId',
       type: 'text',
       unique: true,
-      required: true, 
+      required: false, 
       admin: {
         readOnly: true,
       },

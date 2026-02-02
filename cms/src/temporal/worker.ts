@@ -1,6 +1,7 @@
 import { Worker } from '@temporalio/worker';
 import * as mediaActivities from './activities/media.ts';
 import * as campaignActivities from './activities/campaign.ts';
+import * as paymentActivities from './activities/payments.ts';
 import { getPayload } from 'payload';
 import { setGlobalPayload } from './payload-client.ts';
 import config from '../payload.config.ts';
@@ -20,6 +21,7 @@ async function run() {
   const activities = {
     ...mediaActivities,
     ...campaignActivities,
+    ...paymentActivities,
   };
 
   const worker = await Worker.create({
