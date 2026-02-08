@@ -1,9 +1,9 @@
 # --- TYPEBOT (CHATBOT ENGINE) ---
-typebot.localhost {
+http://typebot.localhost {
 	reverse_proxy typebot-builder:3000
 }
 
-viewer.typebot.localhost {
+http://viewer.typebot.localhost {
 	@options {
 		method OPTIONS
 	}
@@ -22,18 +22,23 @@ viewer.typebot.localhost {
 		Access-Control-Allow-Credentials "true"
 		defer
 	}
-	reverse_proxy typebot-viewer:3000
+	reverse_proxy typebot-viewer:3000 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
 }
 
 # SMM HUB SUBDOMAIN ROUTING (Level 2)
 
 # --- SMM HUB (PAYLOAD CMS) ---
-*.smmhub.localhost, smmhub.localhost {
+http://*.smmhub.localhost, http://smmhub.localhost {
 	reverse_proxy payload:3000
 }
 
 # --- POSTIZ (SOCIAL DISTRIBUTION) ---
-*.postiz.localhost, postiz.localhost {
+http://*.postiz.localhost, http://postiz.localhost {
 	# Force CORS headers at the proxy level
 	header {
 		Access-Control-Allow-Origin {header.Origin}
