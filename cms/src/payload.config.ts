@@ -32,7 +32,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
     components: {
-      beforeNavLinks: ['/components/TenantSwitcher'],
+      beforeNavLinks: [],
       afterNavLinks: ['/components/NavIntegrationsLink'],
       views: {
         integrations: {
@@ -59,7 +59,7 @@ export default buildConfig({
     tasks,
     autoRun: [
       {
-        cron: '* * * * *', // Run every minute
+        cron: '*/5 * * * *', // Run every 5 minutes
         queue: 'default',
       },
     ],

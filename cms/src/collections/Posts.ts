@@ -82,90 +82,17 @@ export const Posts: CollectionConfig = {
   },
   hooks: {
     afterChange: [
-      async ({ doc, operation, req, previousDoc }) => {
-        // 1. Creative Engine & Campaign Lifecycle Trigger
-        const isNewMedia = doc.assets?.rawMedia && !doc.assets?.brandedMedia
-        const isScheduleReady = doc.distributionStatus === 'queued' && previousDoc?.distributionStatus !== 'queued'
-        
-        if (isNewMedia || isScheduleReady) {
-          const tenantId = typeof doc.tenant === 'object' ? doc.tenant.id : doc.tenant
-          
-          // --- Credit Logic (Only if generating new media) ---
-          if (isNewMedia) {
-            const tenant = await req.payload.findByID({
-                collection: 'tenants',
-                id: tenantId,
-            })
-
-            const rawMediaId = typeof doc.assets.rawMedia === 'object' ? doc.assets.rawMedia.id : doc.assets.rawMedia
-            const rawMedia = await req.payload.findByID({
-                collection: 'media',
-                id: rawMediaId,
-            })
-            
-            const isVideo = rawMedia.mimeType?.startsWith('video/')
-            const baseCost = isVideo ? 5 : 1
-            const multiplier = tenant.billing?.costMultiplier || 1
-            const finalCost = baseCost * multiplier
-            const credits = tenant.billing?.credits || 0
-
-            if (credits < finalCost) {
-                console.warn(`[CreativeEngine] Skipped generation: Insufficient Credits.`)
-                return
-            }
-
-            await req.payload.update({
-                collection: 'tenants',
-                id: tenantId,
-                data: {
-                    billing: {
-                        ...tenant.billing,
-                        credits: credits - finalCost,
-                    }
-                },
-                req,
-            })
-            console.log(`[CreativeEngine] Deducted ${finalCost} credits.`)
-          }
-
-          // Extract Creative Data
-          const activeBlock = doc.content?.[0]
-          let creativeData = {}
-          if (activeBlock && activeBlock.data) {
-             creativeData = { template: activeBlock.blockType, ...activeBlock.data as object }
-          }
-
-          try {
-            const temporal = await getTemporalClient()
-            const workflowId = `campaign-post-${doc.id}`
-
-            if (isScheduleReady) {
-               // A. Signal existing workflow to resume (Approval Received)
-               try {
-                 const handle = temporal.workflow.getHandle(workflowId)
-                 await handle.signal('approvePost')
-                 console.log(`[Temporal] Sent 'approvePost' signal to ${workflowId}`)
-               } catch (e) {
-                 console.warn(`[Temporal] Failed to signal workflow:`, e)
-               }
-            } else {
-               // B. Start new workflow (Generation Phase)
-               const handle = await temporal.workflow.start('CampaignWorkflow', {
-                   taskQueue: 'branding-queue',
-                   workflowId: workflowId,
-                   args: [{
-                       postId: doc.id,
-                       tenantId: String(tenantId),
-                       scheduledAt: doc.scheduledAt,
-                       requiresApproval: true,
-                       data: creativeData,
-                   }],
-               })
-               console.log(`[Temporal] Started Campaign Workflow: ${handle.workflowId}`)
-            }
-          } catch (e) {
-            console.error('[Temporal] Workflow Error:', e)
-          }
+      async ({ doc, previousDoc }) => {
+        try {
+          const temporal = await getTemporalClient()
+          await temporal.workflow.start('PostProcessingWorkflow', {
+            taskQueue: 'branding-queue', // Or a more appropriate queue
+            workflowId: `post-processing-${doc.id}-${new Date().getTime()}`,
+            args: [doc, previousDoc],
+          })
+          console.log(`[Hook] Started PostProcessingWorkflow for post ${doc.id}`)
+        } catch (e) {
+          console.error('[Hook] Failed to start PostProcessingWorkflow:', e)
         }
       },
     ],

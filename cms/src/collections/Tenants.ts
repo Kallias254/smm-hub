@@ -1,5 +1,5 @@
 import { CollectionConfig } from 'payload'
-import { createPostizWorkspace } from './Tenants/hooks/createPostizWorkspace.ts'
+import { getTemporalClient } from '../temporal/client'
 
 export const Tenants: CollectionConfig = {
   slug: 'tenants',
@@ -8,7 +8,23 @@ export const Tenants: CollectionConfig = {
     group: 'Organization',
   },
   hooks: {
-    afterChange: [createPostizWorkspace],
+    afterChange: [
+      async ({ doc, operation, req }) => {
+        if (operation !== 'create') return
+        if (doc.integrations?.postizApiKey) return
+
+        try {
+          const temporal = await getTemporalClient()
+          await temporal.workflow.start('CreatePostizWorkspaceWorkflow', {
+            taskQueue: 'branding-queue',
+            workflowId: `create-postiz-workspace-${doc.id}`,
+            args: [doc.id, req.user?.id],
+          })
+        } catch (e) {
+          console.error('[TenantHook] Failed to start Postiz provisioning workflow:', e)
+        }
+      },
+    ],
   },
   access: {
     read: () => true, // Allow public to see tenant name/branding for storefronts

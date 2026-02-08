@@ -61,7 +61,6 @@ export default async function HomePage() {
   }
 
   console.log(`[Homepage] Rendering homepage: "${homepage.title}"`)
-
   const primaryColor = tenant.branding?.primaryColor || '#228be6'
 
   return (
@@ -78,7 +77,15 @@ export default async function HomePage() {
         const BlockComponent = blockComponents[block.blockType]
         if (BlockComponent) {
           // @ts-ignore
-          return <BlockComponent key={i} {...block} primaryColor={primaryColor} />
+          return (
+            <BlockComponent 
+              key={i} 
+              {...block} 
+              primaryColor={primaryColor} 
+              tenantName={tenant.name}
+              tenantLogo={tenant.branding?.logo}
+            />
+          )
         }
         return <div key={i}>Block not found: {block.blockType}</div>
       })}

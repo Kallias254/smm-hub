@@ -1,4 +1,3 @@
-import satori from 'satori'
 import sharp from 'sharp'
 import fs from 'fs'
 import path from 'path'
@@ -7,10 +6,19 @@ import { RealEstateTemplate01 } from './templates/real-estate/RealEstateTemplate
 import { SportsTemplate01 } from './templates/sports/SportsTemplate01'
 import React from 'react'
 
+// Dynamic import for satori
+const getSatori = async () => {
+  const { default: satori } = await import('satori')
+  return satori
+}
+
 // Load Font (Dynamic)
+let fontDataCache: Buffer | null = null
 const getFontData = () => {
+  if (fontDataCache) return fontDataCache
   const fontPath = path.join(process.cwd(), 'public/fonts/Roboto-Bold.ttf')
-  return fs.readFileSync(fontPath)
+  fontDataCache = fs.readFileSync(fontPath)
+  return fontDataCache
 }
 
 export async function generateBrandedImage(input: {
@@ -33,6 +41,7 @@ export async function generateBrandedImage(input: {
 
   // 1. Render to SVG via Satori
   // We pass the entire 'data' object + global branding props
+  const satori = await getSatori()
   const svg = await satori(
     React.createElement(Template, {
       ...data,

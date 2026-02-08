@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload'
-import { syncPostizMemberships } from './Users/hooks/syncPostizMemberships.ts'
+import { getTemporalClient } from '../temporal/client'
 import { enforceSeatLimits } from './Users/hooks/enforceSeatLimits.ts'
 
 export const Users: CollectionConfig = {
@@ -10,7 +10,31 @@ export const Users: CollectionConfig = {
   },
   hooks: {
     beforeValidate: [enforceSeatLimits],
-    afterChange: [syncPostizMemberships],
+    afterChange: [
+      async ({ doc, previousDoc, operation }) => {
+        if (operation !== 'update' && operation !== 'create') return
+        if (!doc.email) return
+
+        const oldTenantIds = previousDoc?.tenants?.map((t: any) => typeof t === 'object' ? t.id : t) || []
+        const newTenantIds = doc.tenants?.map((t: any) => typeof t === 'object' ? t.id : t) || []
+
+        const addedIds = newTenantIds.filter((id: any) => !oldTenantIds.includes(id))
+        const removedIds = oldTenantIds.filter((id: any) => !newTenantIds.includes(id))
+
+        if (addedIds.length === 0 && removedIds.length === 0) return
+
+        try {
+          const temporal = await getTemporalClient()
+          await temporal.workflow.start('SyncPostizMembershipsWorkflow', {
+            taskQueue: 'branding-queue',
+            workflowId: `sync-postiz-memberships-${doc.id}-${new Date().getTime()}`,
+            args: [doc.id, addedIds, removedIds],
+          })
+        } catch (e) {
+          console.error('[UserHook] Failed to start membership sync workflow:', e)
+        }
+      },
+    ],
   },
   auth: true,
   access: {

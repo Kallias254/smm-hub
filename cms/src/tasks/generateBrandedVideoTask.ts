@@ -1,22 +1,37 @@
 import { TaskConfig } from 'payload'
-import ffmpeg from 'fluent-ffmpeg'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
-import satori from 'satori'
 import sharp from 'sharp'
 import React from 'react'
 import { fileURLToPath } from 'url'
 import { GlassIntro, LowerThird, OutroCard, WatermarkTemplate } from '../creative-engine/templates/video/VideoAssets'
 
+// Dynamically import ffmpeg only when needed (server-side)
+const getFfmpeg = async () => {
+  const { default: ffmpeg } = await import('fluent-ffmpeg')
+  return ffmpeg
+}
+
+const getSatori = async () => {
+  const { default: satori } = await import('satori')
+  return satori
+}
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Load Font Helper
-const fontPath = path.resolve(__dirname, '../../public/fonts/Roboto-Bold.ttf')
-const fontData = fs.readFileSync(fontPath)
+let fontDataCache: Buffer | null = null
+function getFontData() {
+  if (fontDataCache) return fontDataCache
+  const fontPath = path.resolve(__dirname, '../../public/fonts/Roboto-Bold.ttf')
+  fontDataCache = fs.readFileSync(fontPath)
+  return fontDataCache
+}
 
 async function generateAsset(Component: any, props: any, outputPath: string) {
+  const fontData = getFontData()
+  const satori = await getSatori()
   const svg = await satori(React.createElement(Component, props), {
     width: 1080,
     height: 1920,
@@ -111,6 +126,7 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
 
       // 4. FFmpeg Processing (Overlay Mode)
       // Using fixed 10s duration for MVP stability, can be dynamic later
+      const ffmpeg = await getFfmpeg()
       await new Promise((resolve, reject) => {
         ffmpeg()
           .input(rawVideoPath).inputOptions(['-t 10']) 

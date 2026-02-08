@@ -2,6 +2,9 @@ import { Worker, NativeConnection } from '@temporalio/worker';
 import * as mediaActivities from './activities/media.ts';
 import * as campaignActivities from './activities/campaign.ts';
 import * as paymentActivities from './activities/payments.ts';
+import * as postProcessingActivities from './activities/post-processing.ts';
+import * as tenantActivities from './activities/tenant-activities.ts';
+import * as paymentActivitiesNew from './activities/payment-activities.ts';
 import { getPayload } from 'payload';
 import { setGlobalPayload } from './payload-client.ts';
 import config from '../payload.config.ts';
@@ -24,6 +27,9 @@ async function run() {
     ...mediaActivities,
     ...campaignActivities,
     ...paymentActivities,
+    ...postProcessingActivities,
+    ...tenantActivities,
+    ...paymentActivitiesNew,
   };
 
   const connection = await NativeConnection.connect({
