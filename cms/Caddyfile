@@ -4,10 +4,31 @@ typebot.localhost {
 }
 
 viewer.typebot.localhost {
-	reverse_proxy typebot-viewer:3000
+	@options {
+		method OPTIONS
+	}
+	handle @options {
+		header Access-Control-Allow-Origin *
+		header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+		header Access-Control-Allow-Headers "*"
+		header Access-Control-Allow-Credentials "true"
+		respond "" 204
+	}
+
+	header {
+		Access-Control-Allow-Origin *
+		header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+		header Access-Control-Allow-Headers "*"
+		header Access-Control-Allow-Credentials "true"
+		defer
+	}
+	reverse_proxy typebot-viewer:3000 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+	}
 }
 
-# --- SMM HUB (Catch-all for subdomains) ---
+# --- SMM HUB ---
 *.smmhub.localhost, smmhub.localhost {
 	reverse_proxy payload:3000
 }
