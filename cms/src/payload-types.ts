@@ -240,13 +240,15 @@ export interface Tenant {
   createdAt: string;
 }
 /**
+ * Build your public-facing homepage using a modular block-based editor.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "homepages".
  */
 export interface Homepage {
   id: number;
   title: string;
-  layout?: (HeroBlock | SplitLayoutBlock | RichTextBlock | FeaturedPropertiesBlock)[] | null;
+  layout?: (HeroBlock | SplitLayoutBlock | RichTextBlock | FeaturedPropertiesBlock | FullScreenChatBlock)[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -415,6 +417,19 @@ export interface Property {
     | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FullScreenChatBlock".
+ */
+export interface FullScreenChatBlock {
+  /**
+   * The public ID of the Typebot to display full-screen (e.g., "real-estate-concierge").
+   */
+  typebotId: string;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'fullScreenChat';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1119,6 +1134,7 @@ export interface HomepagesSelect<T extends boolean = true> {
         splitLayout?: T | SplitLayoutBlockSelect<T>;
         richText?: T | RichTextBlockSelect<T>;
         featuredProperties?: T | FeaturedPropertiesBlockSelect<T>;
+        fullScreenChat?: T | FullScreenChatBlockSelect<T>;
       };
   updatedAt?: T;
   createdAt?: T;
@@ -1184,6 +1200,15 @@ export interface RichTextBlockSelect<T extends boolean = true> {
 export interface FeaturedPropertiesBlockSelect<T extends boolean = true> {
   headline?: T;
   properties?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FullScreenChatBlock_select".
+ */
+export interface FullScreenChatBlockSelect<T extends boolean = true> {
+  typebotId?: T;
   id?: T;
   blockName?: T;
 }

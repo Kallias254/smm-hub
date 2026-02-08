@@ -3,12 +3,14 @@ import { HeroBlock } from '../blocks/Hero'
 import { SplitLayoutBlock } from '../blocks/SplitLayout'
 import { RichTextBlock } from '../blocks/RichText'
 import { FeaturedPropertiesBlock } from '../blocks/FeaturedProperties'
+import { FullScreenChatBlock } from '../blocks/FullScreenChat'
 
 export const Homepages: CollectionConfig = {
   slug: 'homepages',
   admin: {
     useAsTitle: 'title',
     group: 'Content',
+    description: 'Build your public-facing homepage using a modular block-based editor.',
   },
   access: {
     read: () => true,
@@ -18,7 +20,6 @@ export const Homepages: CollectionConfig = {
       name: 'title',
       type: 'text',
       required: true,
-      defaultValue: 'Homepage',
     },
     {
       name: 'layout',
@@ -30,6 +31,7 @@ export const Homepages: CollectionConfig = {
         SplitLayoutBlock,
         RichTextBlock,
         FeaturedPropertiesBlock,
+        FullScreenChatBlock,
       ],
     },
   ],
