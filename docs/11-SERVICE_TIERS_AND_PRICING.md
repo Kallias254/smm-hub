@@ -4,19 +4,20 @@
 
 SMM Hub operates on a "Work vs. Value" principle. We distinguish between the **Utility** (the software machines) and the **Service** (the human strategy and management).
 
-### The Two Core Machines
+### The Three Core Machines
 1.  **The Creative Engine (Branding):** Satori/FFmpeg engine turning raw data into branded assets.
 2.  **The Distribution Pipe (Posting):** The Postiz dashboard for social account linking and scheduling.
+3.  **The Reputation Filter (Reviews):** Automated gatekeeper that pushes 5-star reviews to Google and intercepts complaints.
 
 ---
 
 ## 2. Tier Breakdown
 
-| Tier | Target Audience | Branding Machine | Posting Machine | Credit Multiplier |
-| :--- | :--- | :--- | :--- | :--- |
-| **Self-Service** | Tech-savvy owners | Client uploads/edits | Client connects/schedules | **1x** |
-| **Managed** | Busy professionals | Agency staff handles everything | Agency staff manages setup | **2x** |
-| **Elite** | Large enterprises | API/CRM Integration (No human) | Fully Automated Flow | **5x** |
+| Tier | Target Audience | Branding Machine | Posting Machine | Reputation Machine | Credit Multiplier |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Self-Service** | Tech-savvy owners | Client uploads/edits | Client connects/schedules | Manual Request Link | **1x** |
+| **Managed** | Busy professionals | Agency staff handles everything | Agency staff manages setup | SMS Automation Included | **2x** |
+| **Elite** | Large enterprises | API/CRM Integration (No human) | Fully Automated Flow | Full Concierge Setup | **5x** |
 
 ### Tier 1: Self-Service (SaaS Model)
 The client pays for access to the tools. They provide their own labor to upload media, create campaigns, and link their social media APIs. 

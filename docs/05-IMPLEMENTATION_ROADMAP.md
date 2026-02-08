@@ -19,7 +19,7 @@
 *   Implement `distribution` Job Queue (Stubbed in `publishToPostizTask`).
 *   Test automated posting to a dummy Facebook Page.
 
-**Phase 4: The Mobile Bridge (Days 11-14) - ✅ IN PROGRESS**
+**Phase 4: The Mobile Bridge (Days 11-14) - 🚧 IN PROGRESS**
 *   Scaffold Flutter App (Completed: `HomeScreen`, `TaskCards`).
 *   Implement "Share Intent" logic (Completed via `share_plus` + `path_provider`).
 *   Connect "Confirm Post" feedback loop (Completed: Status updates to `published` after share).
@@ -45,3 +45,17 @@
 *   **Speed:** Instant (no upload/processing lag).
 *   **Complexity:** Low. It's just a React component wrapping a WebGL viewer.
 *   **Outsourcing:** Only necessary if you need "Dollhouse" views (Matterport style) or automated stitching of bad photos. For standard 360 equirectangular images, local rendering is the seasoned choice.
+---
+
+## Phase 6: The Headless CMS (V2) - 🔵 PLANNED
+
+This phase evolves the platform from a social media tool with a storefront to a full-fledged, niche-aware Headless CMS, with the Creative Engine at its core.
+
+### Epic: Headless Creative Engine
+
+This epic focuses on decoupling creative design from content injection, allowing for rapid expansion into new niches and more sophisticated ad creation.
+
+*   **User Story 1 (Admin):** "As a system admin, I can register external creative templates (e.g., Lottie JSON, Remotion bundles) and map their dynamic placeholders to Payload fields."
+*   **User Story 2 (Backend):** "As a developer, I will create a microservice using `ffmpeg` that receives a template ID and a `Post` ID, and renders a final video by stitching the data into the template."
+*   **User Story 3 (Mobile):** "As a mobile user (agent), I can tag my photos and videos with feature names (e.g., 'kitchen', 'balcony') directly within the 'smart camera' interface after capturing them."
+*   **User Story 4 (Frontend):** "As a content manager, I can select a registered creative template when creating a `Post`, see its required fields, and preview the final output."

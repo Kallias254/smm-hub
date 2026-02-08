@@ -60,3 +60,47 @@ The `generateBrandedVideoTask` handles the orchestration, using a temporary dire
 1.  Raw furniture photo enters.
 2.  Background removed.
 3.  Resulting transparent PNG is layered over a pre-selected "Luxury Apartment" background image via `sharp` or `satori`.
+
+## 5. Headless Creative Generation (V2)
+
+The V1 Creative Engine (Satori/FFmpeg) is powerful but requires that all creative logic be coded directly within the application. The V2 engine introduces a "headless" architecture, allowing for far greater creative flexibility without requiring backend code changes.
+
+This model decouples the **Creative Design** from the **Content Injection**.
+
+-   **Creative Design:** Happens outside the system in professional design tools (e.g., Adobe After Effects, Remotion).
+-   **Content Injection:** Happens inside the SMM Hub, where the system programmatically inserts a client's specific data into the pre-designed template.
+
+### 5.1. Template Registration
+
+Admins will have access to a "Creative Templates" collection where they can register new templates. A template record will consist of:
+
+1.  **Template Name:** A human-readable name (e.g., "Elegant Real Estate Showcase Video").
+2.  **Niche Association:** The niche this template is designed for (e.g., 'Real Estate', 'Restaurant').
+3.  **Template Asset:** The uploaded template file itself (e.g., a Lottie JSON file, a Remotion bundle).
+4.  **Data Mapping Schema:** A JSON object defining the available placeholders in the template and what data they map to.
+
+**Example Data Mapping Schema:**
+
+```json
+{
+  "placeholders": [
+    { "id": "price_text", "label": "Property Price", "mapsTo": "property.price" },
+    { "id": "headline_text", "label": "Main Headline", "mapsTo": "post.title" },
+    { "id": "agent_name_text", "label": "Agent's Name", "mapsTo": "agent.name" },
+    { "id": "main_image_1", "label": "Primary Image", "mapsTo": "media.tag.exterior" },
+    { "id": "secondary_image_1", "label": "Kitchen Image", "mapsTo": "media.tag.kitchen" }
+  ]
+}
+```
+
+### 5.2. The Role of FFmpeg
+
+`ffmpeg` remains the core rendering workhorse, but its role shifts from direct composition to being a "final assembly" tool.
+
+**Primary `ffmpeg` Tasks:**
+1.  **Image/Video Substitution:** Replacing placeholder layers in a template with the actual media assets from a `Post`. For example, swapping `placeholder_kitchen.png` with the user's uploaded and tagged kitchen photo.
+2.  **Text Overlay:** Using the `drawtext` filter to burn in dynamic text (price, headlines) based on the template's mapping schema.
+3.  **Concatenation & Stitching:** Assembling different rendered scenes (e.g., an intro, a main body, an outro) into a single video file.
+4.  **Audio Mixing:** Overlaying a licensed audio track and ducking it for any voiceover content.
+
+This headless model means we can introduce new, complex video designs for any niche simply by uploading a new template, without ever deploying new backend code.
