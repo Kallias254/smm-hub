@@ -8,6 +8,7 @@ import {
   Button,
   UnstyledButton,
   Text,
+  Stack,
   SimpleGrid,
   ThemeIcon,
   Anchor,
@@ -39,6 +40,7 @@ import {
   IconBuildingStore,
   IconBuildingSkyscraper,
   IconMap2,
+  IconPhoneCall,
 } from '@tabler/icons-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import classes from './StorefrontHeader.module.css'
@@ -95,11 +97,11 @@ export function StorefrontHeader({ tenant }: StorefrontHeaderProps) {
     <>
       <header className={classes.header}>
         <Container size="xl" h="100%">
-          <Group justify="space-between" h="100%">
+          <Group justify="space-between" h="100%" wrap="nowrap">
             
             {/* Logo */}
             <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <Group gap="md">
+                <Group gap="md" wrap="nowrap">
                     {tenant.branding?.logo?.url ? (
                         <img src={tenant.branding.logo.url} style={{ height: 35, width: 'auto' }} alt={tenant.name} />
                     ) : (
@@ -107,12 +109,12 @@ export function StorefrontHeader({ tenant }: StorefrontHeaderProps) {
                             <IconRocket size={20} />
                         </ThemeIcon>
                     )}
-                    <Text fw={800} size="lg" visibleFrom="xs">{tenant.name}</Text>
+                    <Text fw={900} size="lg" style={{ letterSpacing: -1, whiteSpace: 'nowrap' }}>{tenant.name}</Text>
                 </Group>
             </Link>
 
             {/* Desktop Navigation */}
-            <Group h="100%" gap={0} visibleFrom="sm">
+            <Group h="100%" gap={5} visibleFrom="md">
               <Link href="/" className={classes.link}>
                 Home
               </Link>
@@ -168,22 +170,26 @@ export function StorefrontHeader({ tenant }: StorefrontHeaderProps) {
               </Link>
             </Group>
 
-            {/* Desktop Actions */}
-            <Group visibleFrom="sm">
-                <ActionIcon variant="default" size="lg" radius="md"><IconSearch size={18} /></ActionIcon>
-                <ThemeToggle />
-                <Button 
-                    variant="filled" 
-                    color={primaryColor} 
-                    component={Link} 
-                    href="/properties?action=list"
-                >
-                    List Property
-                </Button>
-            </Group>
+            {/* Desktop & Tablet Actions */}
+            <Group gap="lg" wrap="nowrap">
+                {/* Phone Text (Chameleon: hides on small mobile, shows on tablet+) */}
+                <Group gap="xs" visibleFrom="xs" wrap="nowrap">
+                    <ThemeIcon variant="transparent" color="dimmed" size="sm">
+                        <IconPhoneCall size={18} stroke={1.5} />
+                    </ThemeIcon>
+                    <Text fw={700} size="sm" style={{ letterSpacing: 0.5 }}>
+                        +254 700 000 000
+                    </Text>
+                </Group>
 
-            {/* Mobile Burger */}
-            <Burger opened={drawerOpened} onClick={toggleDrawer} hiddenFrom="sm" />
+                <Group gap="xs" visibleFrom="sm" wrap="nowrap">
+                    <ActionIcon variant="default" size="lg" radius="md"><IconSearch size={18} /></ActionIcon>
+                    <ThemeToggle />
+                </Group>
+
+                {/* Mobile Burger */}
+                <Burger opened={drawerOpened} onClick={toggleDrawer} hiddenFrom="md" size="sm" />
+            </Group>
           </Group>
         </Container>
       </header>
@@ -194,14 +200,14 @@ export function StorefrontHeader({ tenant }: StorefrontHeaderProps) {
         onClose={closeDrawer}
         size="100%"
         padding="md"
-        title={tenant.name}
-        hiddenFrom="sm"
+        title={<Text fw={900}>{tenant.name}</Text>}
+        hiddenFrom="md"
         zIndex={1000000}
       >
         <ScrollArea h={`calc(100vh - ${rem(80)})`} mx="-md">
           <Divider my="sm" />
 
-          <Link href="/" className={classes.link}>
+          <Link href="/" className={classes.link} onClick={closeDrawer}>
             Home
           </Link>
           
@@ -214,22 +220,31 @@ export function StorefrontHeader({ tenant }: StorefrontHeaderProps) {
             </Center>
           </UnstyledButton>
           <Collapse in={linksOpened}>
-            {links}
+            <Box px="md">
+                {links}
+            </Box>
           </Collapse>
 
-          <Link href="/properties?status=For Rent" className={classes.link}>
+          <Link href="/properties?status=For Rent" className={classes.link} onClick={closeDrawer}>
             Rent
           </Link>
-          <Link href="/properties?category=Commercial" className={classes.link}>
+          <Link href="/properties?category=Commercial" className={classes.link} onClick={closeDrawer}>
             Commercial
           </Link>
 
           <Divider my="sm" />
 
-          <Group justify="center" grow pb="xl" px="md">
-            <Button variant="default" component={Link} href="/admin">Log in</Button>
-            <Button component={Link} href="/properties?action=list">List Property</Button>
-          </Group>
+          <Stack p="md" gap="xl">
+            <Group justify="space-between">
+                <Text fw={700} size="sm">Contact Us</Text>
+                <Text fw={800} color={primaryColor}>+254 700 000 000</Text>
+            </Group>
+            
+            <Group grow>
+                <Button variant="default" component={Link} href="/admin" onClick={closeDrawer}>Agent Portal</Button>
+                <ThemeToggle />
+            </Group>
+          </Stack>
         </ScrollArea>
       </Drawer>
     </>

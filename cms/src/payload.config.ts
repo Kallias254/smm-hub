@@ -19,6 +19,9 @@ import { Posts } from './collections/Posts.ts'
 import { Payments } from './collections/Payments.ts'
 import { Leads } from './collections/Leads.ts'
 import { Reviews } from './collections/Reviews.ts'
+import { Forms } from './collections/Forms.ts'
+import { Homepages } from './collections/Homepages.ts'
+import { Properties } from './collections/Properties.ts'
 import { tasks } from './tasks/index.ts'
 import { s3Storage } from '@payloadcms/storage-s3'
 
@@ -39,7 +42,19 @@ export default buildConfig({
       },
     },
   },
-  collections: [Users, Media, Tenants, Campaigns, Posts, Payments, Leads, Reviews],
+  collections: [
+    Users,
+    Media,
+    Tenants,
+    Campaigns,
+    Posts,
+    Payments,
+    Leads,
+    Reviews,
+    Forms,
+    Homepages,
+    Properties,
+  ],
   jobs: {
     tasks,
     autoRun: [

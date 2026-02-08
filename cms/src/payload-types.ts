@@ -75,6 +75,9 @@ export interface Config {
     payments: Payment;
     leads: Lead;
     reviews: Review;
+    forms: Form;
+    homepages: Homepage;
+    properties: Property;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -91,6 +94,9 @@ export interface Config {
     payments: PaymentsSelect<false> | PaymentsSelect<true>;
     leads: LeadsSelect<false> | LeadsSelect<true>;
     reviews: ReviewsSelect<false> | ReviewsSelect<true>;
+    forms: FormsSelect<false> | FormsSelect<true>;
+    homepages: HomepagesSelect<false> | HomepagesSelect<true>;
+    properties: PropertiesSelect<false> | PropertiesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -181,6 +187,7 @@ export interface Tenant {
    * The subdomain for this agency (e.g. "nebula" for nebula.smmhub.localhost). Use only lowercase letters, numbers, and hyphens.
    */
   subdomain: string;
+  homepage?: (number | null) | Homepage;
   branding: {
     /**
      * Hex code for branding (e.g., #FF5733)
@@ -234,6 +241,29 @@ export interface Tenant {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "homepages".
+ */
+export interface Homepage {
+  id: number;
+  title: string;
+  layout?: (HeroBlock | SplitLayoutBlock | RichTextBlock | FeaturedPropertiesBlock)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "HeroBlock".
+ */
+export interface HeroBlock {
+  headline: string;
+  subtext?: string | null;
+  backgroundImage: number | Media;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'hero';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
  */
 export interface Media {
@@ -256,6 +286,135 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "SplitLayoutBlock".
+ */
+export interface SplitLayoutBlock {
+  layout?: ('imageLeft' | 'imageRight') | null;
+  image: number | Media;
+  content: (ChatbotBlock | PreferenceFormBlock)[];
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'splitLayout';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ChatbotBlock".
+ */
+export interface ChatbotBlock {
+  /**
+   * The public ID of the Typebot to display.
+   */
+  typebotId: string;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'chatbot';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PreferenceFormBlock".
+ */
+export interface PreferenceFormBlock {
+  /**
+   * Select the form to display.
+   */
+  form: number | Form;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'preferenceForm';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "forms".
+ */
+export interface Form {
+  id: number;
+  name: string;
+  /**
+   * This is a placeholder for form fields. Ideally, use a form builder plugin.
+   */
+  fields?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "RichTextBlock".
+ */
+export interface RichTextBlock {
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'richText';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeaturedPropertiesBlock".
+ */
+export interface FeaturedPropertiesBlock {
+  headline: string;
+  properties?: (number | Property)[] | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'featuredProperties';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "properties".
+ */
+export interface Property {
+  id: number;
+  title: string;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  price: number;
+  location: string;
+  featuredImage: number | Media;
+  gallery?:
+    | {
+        image: number | Media;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -651,6 +810,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'reviews';
         value: number | Review;
+      } | null)
+    | ({
+        relationTo: 'forms';
+        value: number | Form;
+      } | null)
+    | ({
+        relationTo: 'homepages';
+        value: number | Homepage;
+      } | null)
+    | ({
+        relationTo: 'properties';
+        value: number | Property;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -747,6 +918,7 @@ export interface TenantsSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
   subdomain?: T;
+  homepage?: T;
   branding?:
     | T
     | {
@@ -921,6 +1093,116 @@ export interface ReviewsSelect<T extends boolean = true> {
   feedback?: T;
   status?: T;
   googleReviewLink?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "forms_select".
+ */
+export interface FormsSelect<T extends boolean = true> {
+  name?: T;
+  fields?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "homepages_select".
+ */
+export interface HomepagesSelect<T extends boolean = true> {
+  title?: T;
+  layout?:
+    | T
+    | {
+        hero?: T | HeroBlockSelect<T>;
+        splitLayout?: T | SplitLayoutBlockSelect<T>;
+        richText?: T | RichTextBlockSelect<T>;
+        featuredProperties?: T | FeaturedPropertiesBlockSelect<T>;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "HeroBlock_select".
+ */
+export interface HeroBlockSelect<T extends boolean = true> {
+  headline?: T;
+  subtext?: T;
+  backgroundImage?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "SplitLayoutBlock_select".
+ */
+export interface SplitLayoutBlockSelect<T extends boolean = true> {
+  layout?: T;
+  image?: T;
+  content?:
+    | T
+    | {
+        chatbot?: T | ChatbotBlockSelect<T>;
+        preferenceForm?: T | PreferenceFormBlockSelect<T>;
+      };
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ChatbotBlock_select".
+ */
+export interface ChatbotBlockSelect<T extends boolean = true> {
+  typebotId?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PreferenceFormBlock_select".
+ */
+export interface PreferenceFormBlockSelect<T extends boolean = true> {
+  form?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "RichTextBlock_select".
+ */
+export interface RichTextBlockSelect<T extends boolean = true> {
+  content?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeaturedPropertiesBlock_select".
+ */
+export interface FeaturedPropertiesBlockSelect<T extends boolean = true> {
+  headline?: T;
+  properties?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "properties_select".
+ */
+export interface PropertiesSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  price?: T;
+  location?: T;
+  featuredImage?: T;
+  gallery?:
+    | T
+    | {
+        image?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

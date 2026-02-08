@@ -67,6 +67,12 @@ export const Tenants: CollectionConfig = {
       }
     },
     {
+      name: 'homepage',
+      type: 'relationship',
+      relationTo: 'homepages',
+      hasMany: false,
+    },
+    {
       name: 'branding',
       type: 'group',
       fields: [
