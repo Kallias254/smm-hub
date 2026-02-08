@@ -74,20 +74,34 @@ export default async function HomePage() {
       `}} />
       {homepage.layout.map((block, i) => {
         // @ts-ignore
-        const BlockComponent = blockComponents[block.blockType]
+        const type = block.blockType
+        // @ts-ignore
+        const BlockComponent = blockComponents[type]
+        
+        console.log(`[Homepage] Processing block [${i}]: "${type}". Available keys: ${Object.keys(blockComponents).join(', ')}`)
+
         if (BlockComponent) {
-          // @ts-ignore
-          return (
-            <BlockComponent 
-              key={i} 
-              {...block} 
-              primaryColor={primaryColor} 
-              tenantName={tenant.name}
-              tenantLogo={tenant.branding?.logo}
-            />
-          )
+          try {
+            // @ts-ignore
+            return (
+              <BlockComponent 
+                key={i} 
+                {...block} 
+                primaryColor={primaryColor} 
+                tenantName={tenant.name}
+                tenantLogo={tenant.branding?.logo}
+              />
+            )
+          } catch (renderError) {
+            console.error(`[Homepage] Error rendering block ${type}:`, renderError)
+            return <div key={i}>Error rendering block: {type}</div>
+          }
         }
-        return <div key={i}>Block not found: {block.blockType}</div>
+        return (
+          <div key={i} style={{ padding: '20px', background: 'red', color: 'white' }}>
+            Block not found: {type}. Available: {Object.keys(blockComponents).join(', ')}
+          </div>
+        )
       })}
     </>
   )
