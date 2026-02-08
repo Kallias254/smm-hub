@@ -1,70 +1,20 @@
-# --- TYPEBOT (CHATBOT ENGINE) ---
-http://typebot.localhost {
+# --- TYPEBOT ---
+typebot.localhost {
 	reverse_proxy typebot-builder:3000
 }
 
-http://viewer.typebot.localhost {
-	@options {
-		method OPTIONS
-	}
-	handle @options {
-		header Access-Control-Allow-Origin {header.Origin}
-		header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-		header Access-Control-Allow-Headers "Content-Type, Authorization, *"
-		header Access-Control-Allow-Credentials "true"
-		respond "" 204
-	}
-
-	header {
-		Access-Control-Allow-Origin {header.Origin}
-		Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-		Access-Control-Allow-Headers "Content-Type, Authorization, *"
-		Access-Control-Allow-Credentials "true"
-		defer
-	}
-	reverse_proxy typebot-viewer:3000 {
-		header_up Host {host}
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-	}
+viewer.typebot.localhost {
+	reverse_proxy typebot-viewer:3000
 }
 
-# SMM HUB SUBDOMAIN ROUTING (Level 2)
-
-# --- SMM HUB (PAYLOAD CMS) ---
-http://*.smmhub.localhost, http://smmhub.localhost {
+# --- SMM HUB (Catch-all for subdomains) ---
+*.smmhub.localhost, smmhub.localhost {
 	reverse_proxy payload:3000
 }
 
-# --- POSTIZ (SOCIAL DISTRIBUTION) ---
-http://*.postiz.localhost, http://postiz.localhost {
-	# Force CORS headers at the proxy level
-	header {
-		Access-Control-Allow-Origin {header.Origin}
-		Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-		Access-Control-Allow-Headers "*"
-		Access-Control-Allow-Credentials "true"
-		defer
-	}
-
-	# Handle OPTIONS preflight locally if needed, or pass to backend
-	@options {
-		method OPTIONS
-	}
-	handle @options {
-		header Access-Control-Allow-Origin {header.Origin}
-		header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-		header Access-Control-Allow-Headers "*"
-		header Access-Control-Allow-Credentials "true"
-		respond "" 204
-	}
-
-	# Route to the internal orchestrator
+# --- POSTIZ ---
+*.postiz.localhost, postiz.localhost {
 	reverse_proxy postiz:5000 {
 		header_up Host {host}
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
 	}
 }
