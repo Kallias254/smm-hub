@@ -2,20 +2,21 @@ import { TaskConfig } from 'payload'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
-import sharp from 'sharp'
-import React from 'react'
 import { fileURLToPath } from 'url'
-import { GlassIntro, LowerThird, OutroCard, WatermarkTemplate } from '../creative-engine/templates/video/VideoAssets'
 
-// Dynamically import ffmpeg only when needed (server-side)
-const getFfmpeg = async () => {
-  const { default: ffmpeg } = await import('fluent-ffmpeg')
-  return ffmpeg
+// Utility to get dynamic imports without polluting the top-level scope
+const getDeps = async () => {
+  const [{ default: ffmpeg }, { default: satori }, { default: sharp }, React] = await Promise.all([
+    import('fluent-ffmpeg'),
+    import('satori'),
+    import('sharp'),
+    import('react'),
+  ])
+  return { ffmpeg, satori, sharp, React: React.default || React }
 }
 
-const getSatori = async () => {
-  const { default: satori } = await import('satori')
-  return satori
+const getTemplates = async () => {
+  return await import('../creative-engine/templates/video/VideoAssets')
 }
 
 const __filename = fileURLToPath(import.meta.url)
@@ -29,9 +30,9 @@ function getFontData() {
   return fontDataCache
 }
 
-async function generateAsset(Component: any, props: any, outputPath: string) {
+async function generateAsset(Component: any, props: any, outputPath: string, deps: any) {
+  const { satori, sharp, React } = deps
   const fontData = getFontData()
-  const satori = await getSatori()
   const svg = await satori(React.createElement(Component, props), {
     width: 1080,
     height: 1920,
@@ -59,6 +60,39 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
   handler: async ({ req, input }) => {
     const { payload } = req
     const { postId, mediaId, tenantId, data } = input
+
+    // Check for Temporal delegation first (Fast Path, no heavy deps loaded)
+    if (process.env.TEMPORAL_ENABLED === 'true') {
+        try {
+            const { getTemporalClient } = await import('../temporal/client')
+            const temporal = await getTemporalClient()
+            
+            const safeMediaId = typeof mediaId === 'object' && mediaId !== null ? (mediaId as any).id : mediaId
+            const safeTenantId = typeof tenantId === 'object' && tenantId !== null ? (tenantId as any).id : tenantId
+
+            await temporal.workflow.start('BrandingWorkflow', {
+                taskQueue: 'branding-queue',
+                workflowId: `video-branding-${postId}-${Date.now()}`,
+                args: [{
+                    postId: String(postId),
+                    mediaId: String(safeMediaId),
+                    tenantId: String(safeTenantId),
+                    data,
+                    isVideo: true
+                }]
+            })
+            return { output: { success: true } }
+        } catch (e) {
+            console.error('[VideoTask] Failed to delegate to Temporal:', e)
+            // Fallback to local processing if Temporal fails? 
+            // Better to fail fast or continue. Let's continue for now.
+        }
+    }
+
+    // Heavy Path: Only load deps if we are actually processing here
+    const deps = await getDeps()
+    const { GlassIntro, LowerThird, OutroCard, WatermarkTemplate } = await getTemplates()
+    
     const tmpDir = path.join(os.tmpdir(), `video-${Date.now()}`)
     fs.mkdirSync(tmpDir, { recursive: true })
 
@@ -79,7 +113,6 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
       // 1c. Resolve Video Path (S3 / Local Hybrid)
       let rawVideoPath = ''
       if (media.url && (media.url.startsWith('http') || media.url.startsWith('//'))) {
-          // It's in S3/MinIO, we must download it to process with FFmpeg locally
           const downloadPath = path.join(tmpDir, 'raw_input.mp4')
           const downloadUrl = media.url.startsWith('//') ? `http:${media.url}` : media.url
           
@@ -91,20 +124,18 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
           fs.writeFileSync(downloadPath, buffer)
           rawVideoPath = downloadPath
       } else {
-          // Fallback to local disk (legacy)
           rawVideoPath = path.resolve(process.cwd(), 'media', media.filename as string)
       }
 
       const outputPath = path.join(tmpDir, 'output.mp4')
       
-      // 2. Map Data to Template Fields
+      const brandingColor = tenant.branding?.primaryColor || '#fbbf24'
+      const agencyName = tenant.name || 'SMM HUB'
+
       let introTitle = 'NEW POST'
       let introSub = 'Check this out'
       let lowerMain = 'SMM HUB'
       let lowerSub = 'Click for details'
-      
-      const brandingColor = tenant.branding?.primaryColor || '#fbbf24'
-      const agencyName = tenant.name || 'SMM HUB'
 
       if (data.template === 'real-estate-listing') {
         introTitle = 'JUST LISTED'
@@ -119,14 +150,13 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
       }
 
       // 3. Generate Overlays
-      await generateAsset(WatermarkTemplate, { text: agencyName }, path.join(tmpDir, 'watermark.png'))
-      await generateAsset(GlassIntro, { title: introTitle, subtitle: introSub, color: brandingColor }, path.join(tmpDir, 'intro.png'))
-      await generateAsset(LowerThird, { mainText: lowerMain, subText: lowerSub, color: brandingColor }, path.join(tmpDir, 'lower.png'))
-      await generateAsset(OutroCard, { ctaText: 'CONTACT US', contactInfo: agencyName, color: brandingColor }, path.join(tmpDir, 'outro.png'))
+      await generateAsset(WatermarkTemplate, { text: agencyName }, path.join(tmpDir, 'watermark.png'), deps)
+      await generateAsset(GlassIntro, { title: introTitle, subtitle: introSub, color: brandingColor }, path.join(tmpDir, 'intro.png'), deps)
+      await generateAsset(LowerThird, { mainText: lowerMain, subText: lowerSub, color: brandingColor }, path.join(tmpDir, 'lower.png'), deps)
+      await generateAsset(OutroCard, { ctaText: 'CONTACT US', contactInfo: agencyName, color: brandingColor }, path.join(tmpDir, 'outro.png'), deps)
 
-      // 4. FFmpeg Processing (Overlay Mode)
-      // Using fixed 10s duration for MVP stability, can be dynamic later
-      const ffmpeg = await getFfmpeg()
+      // 4. FFmpeg Processing
+      const { ffmpeg } = deps
       await new Promise((resolve, reject) => {
         ffmpeg()
           .input(rawVideoPath).inputOptions(['-t 10']) 
@@ -134,26 +164,14 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
           .input(path.join(tmpDir, 'lower.png')).inputOptions(['-loop 1', '-t 10'])
           .input(path.join(tmpDir, 'watermark.png')).inputOptions(['-loop 1', '-t 10'])
           .input(path.join(tmpDir, 'outro.png')).inputOptions(['-loop 1', '-t 10'])
-
           .complexFilter([
-              // Scale to Vertical 1080x1920
               '[0:v]scale=1080:1920,setsar=1[base]',
-
-              // Intro (0-3s)
               '[base][1:v]overlay=0:0:enable=\'between(t,0,3)\'[v1]',
-              // Lower Third (3-8s)
               '[v1][2:v]overlay=0:0:enable=\'between(t,3,8)\'[v2]',
-              // Watermark (0-8s)
               '[v2][3:v]overlay=0:0:enable=\'between(t,0,8)\'[v3]',
-              // Outro (8-10s)
               '[v3][4:v]overlay=0:0:enable=\'between(t,8,10)\'[v]'
           ])
-          .outputOptions([
-            '-map [v]', 
-            '-pix_fmt yuv420p',
-            '-c:v libx264',
-            '-preset ultrafast'
-          ])
+          .outputOptions(['-map [v]', '-pix_fmt yuv420p', '-c:v libx264', '-preset ultrafast'])
           .save(outputPath)
           .on('end', resolve)
           .on('error', reject)
@@ -176,15 +194,11 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
         },
       })
 
-      // 6. Update Post & Deduct Credit
+      // 6. Update Post & Credits
       await payload.update({
         collection: 'posts',
         id: postId,
-        data: {
-          assets: {
-            brandedMedia: generatedMedia.id,
-          },
-        },
+        data: { assets: { brandedMedia: generatedMedia.id } },
       })
 
       await payload.update({
@@ -198,15 +212,13 @@ export const generateBrandedVideoTask: TaskConfig<{ input: GenerateBrandedVideoI
         }
       })
 
-      console.log(`[VideoTask] Success. 1 credit deducted from ${tenant.name}. Remaining: ${currentCredits - 1}`)
-
       return { output: { success: true, generatedMediaId: generatedMedia.id } }
     } catch (error: any) {
       console.error('Video Branding Failed:', error)
       return { output: { success: false, error: error.message } }
     } finally {
-      // Clean up tmp
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }
   },
 }
+

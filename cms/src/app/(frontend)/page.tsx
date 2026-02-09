@@ -78,7 +78,7 @@ export default async function HomePage() {
         // @ts-ignore
         const BlockComponent = blockComponents[type]
         
-        console.log(`[Homepage] Processing block [${i}]: "${type}". Available keys: ${Object.keys(blockComponents).join(', ')}`)
+        console.log(`[Homepage] Processing block [${i}]: "${type}". Tenant Name: "${tenant.name}", Color: ${primaryColor}`)
 
         if (BlockComponent) {
           try {
@@ -89,6 +89,7 @@ export default async function HomePage() {
                 {...block} 
                 primaryColor={primaryColor} 
                 tenantName={tenant.name}
+                agencyName={tenant.name}
                 tenantLogo={tenant.branding?.logo}
               />
             )

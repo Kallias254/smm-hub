@@ -1,16 +1,8 @@
-import sharp from 'sharp'
 import fs from 'fs'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import { RealEstateTemplate01 } from './templates/real-estate/RealEstateTemplate01'
 import { SportsTemplate01 } from './templates/sports/SportsTemplate01'
 import React from 'react'
-
-// Dynamic import for satori
-const getSatori = async () => {
-  const { default: satori } = await import('satori')
-  return satori
-}
 
 // Load Font (Dynamic)
 let fontDataCache: Buffer | null = null
@@ -30,6 +22,12 @@ export async function generateBrandedImage(input: {
   const { data } = input
   const fontData = getFontData()
   
+  // Dynamic imports for heavy deps
+  const [{ default: satori }, { default: sharp }] = await Promise.all([
+    import('satori'),
+    import('sharp'),
+  ])
+
   // Select Template based on Block Type (slug)
   let Template: any = RealEstateTemplate01 // Default
 
@@ -40,8 +38,6 @@ export async function generateBrandedImage(input: {
   }
 
   // 1. Render to SVG via Satori
-  // We pass the entire 'data' object + global branding props
-  const satori = await getSatori()
   const svg = await satori(
     React.createElement(Template, {
       ...data,

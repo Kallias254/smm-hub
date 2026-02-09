@@ -1,6 +1,4 @@
 import { TaskConfig } from 'payload'
-import { generateBrandedImage } from '../creative-engine/generator'
-import { getTemporalClient } from '../temporal/client'
 import path from 'path'
 import fs from 'fs'
 
@@ -27,6 +25,7 @@ export const generateBrandedImageTask: TaskConfig<{ input: GenerateBrandedImageI
       // --- TEMPORAL SWITCH ---
       if (process.env.TEMPORAL_ENABLED === 'true') {
         console.log('[Task] Delegating to Temporal Workflow...')
+        const { getTemporalClient } = await import('../temporal/client')
         const client = await getTemporalClient()
         
         // Handle populated objects for Temporal input
@@ -45,31 +44,19 @@ export const generateBrandedImageTask: TaskConfig<{ input: GenerateBrandedImageI
         })
 
         console.log(`[Task] Temporal Workflow started: ${handle.workflowId}`)
-        
-        // We return success immediately. The Workflow handles the actual DB update later.
-        return {
-          output: {
-            success: true,
-            // generatedMediaId is unknown at this point, but that's okay because the Workflow updates the Post directly.
-          }
-        }
+        return { output: { success: true } }
       }
       // -----------------------
 
+      // Heavy Path: Only load generator if we are actually processing here
+      const { generateBrandedImage } = await import('../creative-engine/generator')
+
       // 1. Fetch Media and Tenant branding
-      // Handle populated objects
       const safeMediaId = typeof mediaId === 'object' && mediaId !== null ? (mediaId as any).id : mediaId
       const safeTenantId = typeof tenantId === 'object' && tenantId !== null ? (tenantId as any).id : tenantId
 
-      const media = await payload.findByID({
-        collection: 'media',
-        id: safeMediaId,
-      })
-
-      const tenant = await payload.findByID({
-        collection: 'tenants',
-        id: safeTenantId,
-      })
+      const media = await payload.findByID({ collection: 'media', id: safeMediaId })
+      const tenant = await payload.findByID({ collection: 'tenants', id: safeTenantId })
 
       // 2. Prepare generation data
       const imagePath = path.resolve(process.cwd(), 'media', media.filename as string)
@@ -80,10 +67,7 @@ export const generateBrandedImageTask: TaskConfig<{ input: GenerateBrandedImageI
       let logoUrl = ''
       if (tenant.branding?.logo) {
         const logoId = typeof tenant.branding.logo === 'object' ? tenant.branding.logo.id : tenant.branding.logo
-        const logoMedia = await payload.findByID({
-          collection: 'media',
-          id: logoId
-        })
+        const logoMedia = await payload.findByID({ collection: 'media', id: logoId })
         const logoPath = path.resolve(process.cwd(), 'media', logoMedia.filename as string)
         const logoBuffer = fs.readFileSync(logoPath)
         logoUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`
@@ -94,10 +78,10 @@ export const generateBrandedImageTask: TaskConfig<{ input: GenerateBrandedImageI
         imageUrl: base64Image,
         agencyLogo: logoUrl || undefined,
         primaryColor: tenant.branding?.primaryColor || undefined,
-        data: data, // Pass the block data (contains price, title, teams, etc.)
+        data: data,
       })
 
-      // 4. Save the generated image as a NEW Media record
+      // 4. Save to Media
       const generatedMedia = await payload.create({
         collection: 'media',
         data: {
@@ -112,31 +96,17 @@ export const generateBrandedImageTask: TaskConfig<{ input: GenerateBrandedImageI
         },
       })
 
-      // 5. Update the original Post with the new branded media
+      // 5. Update Post
       await payload.update({
         collection: 'posts',
         id: postId,
-        data: {
-          assets: {
-            brandedMedia: generatedMedia.id,
-          },
-        },
+        data: { assets: { brandedMedia: generatedMedia.id } },
       })
 
-      return {
-        output: {
-          success: true,
-          generatedMediaId: generatedMedia.id,
-        },
-      }
+      return { output: { success: true, generatedMediaId: generatedMedia.id } }
     } catch (error: any) {
       console.error('Branding Task Failed:', error)
-      return {
-        output: {
-          success: false,
-          error: error.message,
-        },
-      }
+      return { output: { success: false, error: error.message } }
     }
   },
 }
